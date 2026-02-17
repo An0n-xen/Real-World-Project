@@ -7,7 +7,7 @@ from pathlib import Path
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from medagent.config import get_settings
 from medagent.logger import get_logger
@@ -28,8 +28,11 @@ class MedicalRAG:
     ) -> None:
         settings = get_settings()
 
-        self._embeddings = HuggingFaceEmbeddings(
-            model_name=settings.embedding_model,
+        self._embeddings = OpenAIEmbeddings(
+            model=settings.embedding_model,
+            openai_api_key=settings.deepinfra_api_key,
+            openai_api_base=settings.deepinfra_base_url,
+            check_embedding_ctx_length=False,
         )
         self._persist_dir = persist_directory or os.path.join(
             settings.output_dir, "chroma_db"

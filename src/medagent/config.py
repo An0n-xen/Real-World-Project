@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     rag_chunk_size: int = 1000
     rag_chunk_overlap: int = 200
     rag_top_k: int = 5
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "BAAI/bge-large-en-v1.5"
 
     # ── Paths ──────────────────────────────────────────────────
     diseases_dir: str = str(_PROJECT_ROOT / "diseases")

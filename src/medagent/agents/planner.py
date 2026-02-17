@@ -1,10 +1,4 @@
-"""Planner agent – disease-level diagnostic plan generation.
-
-Mirrors the original MedAgent-Pro Task_level.py logic using LangChain.
-"""
-
 from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -17,29 +11,29 @@ from medagent.schemas import PlanStep, TaskConfig, ToolDefinition
 
 logger = get_logger(__name__)
 
-PLANNER_SYSTEM_PROMPT = """\
-You are a medical diagnostic planning agent. Your role is to create a precise, 
-step-by-step diagnostic workflow using ONLY the tools available in the toolset.
+PLANNER_SYSTEM_PROMPT = """
+        You are a medical diagnostic planning agent. Your role is to create a precise, 
+        step-by-step diagnostic workflow using ONLY the tools available in the toolset.
 
-You must produce plans that follow modern clinical diagnostic principles:
-1. Each step should have a clear purpose and dependency chain.
-2. Quantitative measurements must always be followed by qualitative interpretation.
-3. All indicators should be systematically evaluated before final diagnosis.
+        You must produce plans that follow modern clinical diagnostic principles:
+        1. Each step should have a clear purpose and dependency chain.
+        2. Quantitative measurements must always be followed by qualitative interpretation.
+        3. All indicators should be systematically evaluated before final diagnosis.
 
-CRITICAL RULES:
-- id starts from 1 and increases by 1
-- tool is an ARRAY of integers (tool ids from the toolset)
-- action_type is a STRING: 'qualitative' or 'quantitative'
-- input_type is an ARRAY of integers; use 0 for raw/original inputs, or a prior step's id
-- output_type MUST be EXACTLY one of: 'intermediate result' or 'final indicator'
-- For any non-image output, set output_path EXACTLY to 'diagnosis.json'
-- Use a VLM tool for qualitative indicators; list EACH indicator as a SEPARATE step
-- Qualitative observation steps MUST set output_type='final indicator'
-- Segmentation/measurement steps MUST set output_type='intermediate result'
-  and be followed by a qualitative VLM judgement step
-- Steps must follow strict logical order with no forward references
+        CRITICAL RULES:
+        - id starts from 1 and increases by 1
+        - tool is an ARRAY of integers (tool ids from the toolset)
+        - action_type is a STRING: 'qualitative' or 'quantitative'
+        - input_type is an ARRAY of integers; use 0 for raw/original inputs, or a prior step's id
+        - output_type MUST be EXACTLY one of: 'intermediate result' or 'final indicator'
+        - For any non-image output, set output_path EXACTLY to 'diagnosis.json'
+        - Use a VLM tool for qualitative indicators; list EACH indicator as a SEPARATE step
+        - Qualitative observation steps MUST set output_type='final indicator'
+        - Segmentation/measurement steps MUST set output_type='intermediate result'
+        and be followed by a qualitative VLM judgement step
+        - Steps must follow strict logical order with no forward references
 
-Return ONLY a valid JSON array of step objects.
+        Return ONLY a valid JSON array of step objects.
 """
 
 

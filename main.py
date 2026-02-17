@@ -1,13 +1,4 @@
-"""MedAgent-Pro CLI — Evidence-based multi-modal medical diagnosis.
-
-Usage:
-    uv run python main.py plan     --disease glaucoma
-    uv run python main.py diagnose --disease glaucoma --image path/to/image.jpg
-    uv run python main.py ingest   --disease glaucoma
-"""
-
 from __future__ import annotations
-
 import argparse
 import json
 import os
@@ -25,6 +16,8 @@ def cmd_ingest(args: argparse.Namespace) -> None:
     from medagent.rag.retriever import MedicalRAG
 
     settings = get_settings()
+
+    # Get guidelines directory
     guidelines_dir = os.path.join(settings.diseases_dir, args.disease, "guidelines")
 
     if not os.path.isdir(guidelines_dir):
@@ -43,8 +36,9 @@ def cmd_plan(args: argparse.Namespace) -> None:
     from medagent.schemas import TaskConfig, ToolDefinition
 
     settings = get_settings()
-    disease_dir = os.path.join(settings.diseases_dir, args.disease)
 
+    # Get disease directory
+    disease_dir = os.path.join(settings.diseases_dir, args.disease)
     task_path = os.path.join(disease_dir, "task.json")
     toolset_path = os.path.join(disease_dir, "toolset.json")
 
