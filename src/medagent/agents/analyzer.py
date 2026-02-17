@@ -1,12 +1,4 @@
-"""Analyzer agent – qualitative VLM-based medical image analysis.
-
-Sends images + prompts to the multi-modal VLM via DeepInfra for
-qualitative diagnostic assessment (mirrors the original GPT_Decider
-for qualitative steps).
-"""
-
 from __future__ import annotations
-
 import base64
 import json
 import os
@@ -20,22 +12,22 @@ from medagent.logger import get_logger
 
 logger = get_logger(__name__)
 
-ANALYZER_SYSTEM_PROMPT = """\
-You are a clinical image analysis specialist. You carefully examine 
-medical images and provide detailed, evidence-based qualitative assessments.
+ANALYZER_SYSTEM_PROMPT = """
+        You are a clinical image analysis specialist. You carefully examine 
+        medical images and provide detailed, evidence-based qualitative assessments.
 
-RULES:
-1. Describe what you observe objectively.
-2. Note any abnormalities or notable findings.
-3. Reference specific visual features (color, shape, size, location).
-4. Indicate your confidence level for each observation.
-5. Be precise — avoid vague or overly general statements.
+        RULES:
+        1. Describe what you observe objectively.
+        2. Note any abnormalities or notable findings.
+        3. Reference specific visual features (color, shape, size, location).
+        4. Indicate your confidence level for each observation.
+        5. Be precise — avoid vague or overly general statements.
 
-Output your analysis as a JSON object with these keys:
-- "observation": detailed description of findings
-- "abnormality_detected": true/false
-- "confidence": float between 0 and 1
-- "reasoning": brief explanation of your assessment
+        Output your analysis as a JSON object with these keys:
+        - "observation": detailed description of findings
+        - "abnormality_detected": true/false
+        - "confidence": float between 0 and 1
+        - "reasoning": brief explanation of your assessment
 """
 
 

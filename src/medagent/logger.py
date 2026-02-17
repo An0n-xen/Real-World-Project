@@ -1,10 +1,3 @@
-"""Centralized colored logging for MedAgent-Pro.
-
-Every module should use:
-    from medagent.logger import get_logger
-    logger = get_logger(__name__)
-"""
-
 import logging
 import colorlog
 

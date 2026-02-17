@@ -1,10 +1,4 @@
-"""Central configuration via pydantic-settings.
-
-Reads from environment variables and/or a `.env` file.
-"""
-
 from pathlib import Path
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

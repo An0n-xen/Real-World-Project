@@ -37,7 +37,7 @@
       2
     ],
     "output_type": "intermediate result",
-    "output_path": "cd_ratio.json"
+    "output_path": "cdr_value.json"
   },
   {
     "id": 4,
@@ -47,10 +47,12 @@
     "action_type": "qualitative",
     "action": "",
     "input_type": [
-      0
+      1,
+      2,
+      3
     ],
     "output_type": "final indicator",
-    "output_path": "disc_hemorrhages.json"
+    "output_path": "diagnosis.json"
   },
   {
     "id": 5,
@@ -63,7 +65,7 @@
       0
     ],
     "output_type": "final indicator",
-    "output_path": "peripapillary_atrophy.json"
+    "output_path": "diagnosis.json"
   },
   {
     "id": 6,
@@ -76,7 +78,7 @@
       0
     ],
     "output_type": "final indicator",
-    "output_path": "rnfl_defects.json"
+    "output_path": "diagnosis.json"
   },
   {
     "id": 7,
@@ -86,24 +88,7 @@
     "action_type": "qualitative",
     "action": "",
     "input_type": [
-      1
-    ],
-    "output_type": "final indicator",
-    "output_path": "isnt_rule.json"
-  },
-  {
-    "id": 8,
-    "tool": [
-      1
-    ],
-    "action_type": "qualitative",
-    "action": "",
-    "input_type": [
-      3,
-      4,
-      5,
-      6,
-      7
+      0
     ],
     "output_type": "final indicator",
     "output_path": "diagnosis.json"

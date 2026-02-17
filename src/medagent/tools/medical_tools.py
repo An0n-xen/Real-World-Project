@@ -1,20 +1,7 @@
-"""Built-in placeholder medical tools for MedAgent-Pro.
-
-These are **mock** implementations that generate placeholder outputs.
-Replace them with real models (MedSAM, Cellpose, etc.) for production use.
-
-All tools follow the standard signature::
-
-    tool_function(image_path: str, save_dir: str, save_name: str)
-"""
-
 from __future__ import annotations
-
 import os
-
 import numpy as np
 from PIL import Image
-
 from medagent.logger import get_logger
 
 logger = get_logger(__name__)

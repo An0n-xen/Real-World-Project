@@ -1,5 +1,3 @@
-"""RAG-based retrieval of medical guidelines using LangChain + ChromaDB."""
-
 from __future__ import annotations
 
 import os

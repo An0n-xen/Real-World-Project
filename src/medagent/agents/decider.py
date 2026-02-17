@@ -1,13 +1,7 @@
-"""Decider agent – synthesises indicators into a final diagnosis.
-
-Reimplements the Pro_Decider logic from MedAgent-Pro using LangChain.
-"""
-
 from __future__ import annotations
 
 import json
 from pathlib import Path
-
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -17,21 +11,21 @@ from medagent.schemas import DiagnosisResult, DiagnosticIndicator, WeightedIndic
 
 logger = get_logger(__name__)
 
-DECIDER_SYSTEM_PROMPT = """\
-You are a clinical decision assistant. Given a set of diagnostic indicators 
-(each with whether abnormality was detected), you must:
+DECIDER_SYSTEM_PROMPT = """
+    You are a clinical decision assistant. Given a set of diagnostic indicators 
+    (each with whether abnormality was detected), you must:
 
-1. Propose reasonable clinical weights for each indicator (sum to 1.0).
-2. Set a diagnostic threshold in [0, 1].
-3. Determine the final diagnosis.
+    1. Propose reasonable clinical weights for each indicator (sum to 1.0).
+    2. Set a diagnostic threshold in [0, 1].
+    3. Determine the final diagnosis.
 
-Output a JSON object with:
-- "weights": list of {"indicator_name": str, "weight": float}
-- "threshold": float
-- "diagnosis": "positive" or "negative"
-- "confidence": float between 0 and 1
-- "evidence": list of strings explaining key reasons
-- "notes": optional short string with caveats
+    Output a JSON object with:
+    - "weights": list of {"indicator_name": str, "weight": float}
+    - "threshold": float
+    - "diagnosis": "positive" or "negative"
+    - "confidence": float between 0 and 1
+    - "evidence": list of strings explaining key reasons
+    - "notes": optional short string with caveats
 """
 
 

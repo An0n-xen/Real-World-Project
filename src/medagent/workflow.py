@@ -1,17 +1,4 @@
-"""LangGraph workflow implementing the full MedAgent-Pro diagnostic pipeline.
-
-Workflow nodes:
-  1. load_config     – Load task.json + toolset.json
-  2. retrieve_guidelines – RAG medical guideline retrieval
-  3. generate_plan   – Planner agent creates diagnostic plan
-  4. generate_tools  – Coding agent generates quantitative functions
-  5. execute_step    – Run each plan step (quantitative or qualitative)
-  6. collect_indicators – Gather final indicators
-  7. final_decision  – Decider synthesises diagnosis
-"""
-
 from __future__ import annotations
-
 import json
 import os
 import re

@@ -1,7 +1,4 @@
-"""Summary agent – condenses qualitative analysis results into brief diagnostics."""
-
 from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -14,14 +11,14 @@ from medagent.logger import get_logger
 logger = get_logger(__name__)
 
 SUMMARY_SYSTEM_PROMPT = """\
-You are a clinical summarisation assistant. Given detailed diagnostic analysis 
-text, produce a concise clinical summary.
+    You are a clinical summarisation assistant. Given detailed diagnostic analysis 
+    text, produce a concise clinical summary.
 
-Output a JSON object with:
-- "summary": 1-3 sentence clinical summary
-- "abnormality_present": true/false
-- "severity": "none" | "mild" | "moderate" | "severe"
-- "key_findings": list of short strings
+    Output a JSON object with:
+    - "summary": 1-3 sentence clinical summary
+    - "abnormality_present": true/false
+    - "severity": "none" | "mild" | "moderate" | "severe"
+    - "key_findings": list of short strings
 """
 
 
