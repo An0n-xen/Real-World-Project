@@ -61,7 +61,7 @@ class AnalyzerAgent:
             model=settings.primary_vlm_model,
             api_key=settings.deepinfra_api_key,
             base_url=settings.deepinfra_base_url,
-            temperature=0.2,
+            temperature=0,
             max_tokens=2048,
         )
         logger.info("AnalyzerAgent ready  model=%s", settings.primary_vlm_model)

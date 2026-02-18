@@ -63,7 +63,7 @@ class CodingAgent:
             model=settings.text_llm_model,
             api_key=settings.deepinfra_api_key,
             base_url=settings.deepinfra_base_url,
-            temperature=0.1,
+            temperature=0,
             max_tokens=2048,
         )
         logger.info("CodingAgent ready  model=%s", settings.text_llm_model)

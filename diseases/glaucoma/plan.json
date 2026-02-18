@@ -37,7 +37,7 @@
       2
     ],
     "output_type": "intermediate result",
-    "output_path": "cdr_value.json"
+    "output_path": "cd_ratio.json"
   },
   {
     "id": 4,
@@ -47,8 +47,6 @@
     "action_type": "qualitative",
     "action": "",
     "input_type": [
-      1,
-      2,
       3
     ],
     "output_type": "final indicator",
@@ -56,32 +54,6 @@
   },
   {
     "id": 5,
-    "tool": [
-      1
-    ],
-    "action_type": "qualitative",
-    "action": "",
-    "input_type": [
-      0
-    ],
-    "output_type": "final indicator",
-    "output_path": "diagnosis.json"
-  },
-  {
-    "id": 6,
-    "tool": [
-      1
-    ],
-    "action_type": "qualitative",
-    "action": "",
-    "input_type": [
-      0
-    ],
-    "output_type": "final indicator",
-    "output_path": "diagnosis.json"
-  },
-  {
-    "id": 7,
     "tool": [
       1
     ],
