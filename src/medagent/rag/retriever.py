@@ -41,6 +41,7 @@ class MedicalRAG:
         )
         self._top_k = settings.rag_top_k
         self._vectorstore: Chroma | None = None
+        self._try_load_existing()
 
         logger.info(
             "MedicalRAG initialised  embed_model=%s  persist=%s",
@@ -48,16 +49,42 @@ class MedicalRAG:
             self._persist_dir,
         )
 
+    def _try_load_existing(self) -> None:
+        """Load an existing ChromaDB store from disk if available."""
+        if self._vectorstore is not None:
+            return
+        if os.path.isdir(self._persist_dir):
+            store = Chroma(
+                persist_directory=self._persist_dir,
+                embedding_function=self._embeddings,
+            )
+            if store._collection.count() > 0:
+                self._vectorstore = store
+                logger.info(
+                    "Loaded existing ChromaDB (%d docs) from %s",
+                    store._collection.count(),
+                    self._persist_dir,
+                )
+
+    def has_data(self) -> bool:
+        """Return True if the vector store already contains documents."""
+        return self._vectorstore is not None
+
     # ── Ingestion ──────────────────────────────────────────────
 
-    def load_guidelines(self, path: str | Path) -> int:
+    def load_guidelines(self, path: str | Path, force: bool = False) -> int:
         """Ingest medical guideline documents from *path*.
 
         *path* can be a single file or a directory.  Supported formats:
-        `.txt`, `.md`, `.pdf` (plain-text extraction only).
+        `.txt`, `.md`.
 
-        Returns the number of chunks stored.
+        Skips ingestion if ChromaDB already contains data (use force=True to re-ingest).
+        Returns the number of chunks stored (0 if skipped).
         """
+        if self.has_data() and not force:
+            logger.info("Guidelines already loaded in ChromaDB — skipping ingestion")
+            return 0
+
         path = Path(path)
         texts: list[str] = []
         metadatas: list[dict] = []
@@ -95,16 +122,8 @@ class MedicalRAG:
     def query(self, question: str) -> str:
         """Retrieve the top-k relevant guideline passages for *question*."""
         if self._vectorstore is None:
-            # Try loading existing persisted store
-            if os.path.isdir(self._persist_dir):
-                self._vectorstore = Chroma(
-                    persist_directory=self._persist_dir,
-                    embedding_function=self._embeddings,
-                )
-                logger.info("Loaded existing ChromaDB from %s", self._persist_dir)
-            else:
-                logger.warning("No vector store available — returning empty context")
-                return ""
+            logger.warning("No vector store available — returning empty context")
+            return ""
 
         docs = self._vectorstore.similarity_search(question, k=self._top_k)
         if not docs:

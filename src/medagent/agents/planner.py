@@ -50,7 +50,7 @@ class PlannerAgent:
             model=settings.text_llm_model,
             api_key=settings.deepinfra_api_key,
             base_url=settings.deepinfra_base_url,
-            temperature=0.2,
+            temperature=0,
             max_tokens=4096,
         )
         logger.info("PlannerAgent ready  model=%s", settings.text_llm_model)

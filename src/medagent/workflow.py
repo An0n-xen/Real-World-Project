@@ -203,7 +203,18 @@ def retrieve_guidelines(state: GraphState) -> GraphState:
 
 
 def generate_plan(state: GraphState) -> GraphState:
-    """Node 3: Generate a diagnostic plan using the Planner agent."""
+    """Node 3: Generate a diagnostic plan using the Planner agent.
+
+    Reuses an existing plan.json if one is found in the disease directory.
+    """
+    plan_path = os.path.join(state["disease_dir"], "plan.json")
+
+    # Reuse cached plan if it exists
+    if os.path.exists(plan_path):
+        plan_data = json.loads(Path(plan_path).read_text(encoding="utf-8"))
+        logger.info("Reusing existing plan (%d steps) from %s", len(plan_data), plan_path)
+        return {**state, "plan": plan_data}
+
     task = TaskConfig(**state["task_config"])
     toolset = [ToolDefinition(**t) for t in state["toolset"]]
 
@@ -212,7 +223,6 @@ def generate_plan(state: GraphState) -> GraphState:
 
     # Save plan
     plan_data = [s.model_dump() for s in steps]
-    plan_path = os.path.join(state["disease_dir"], "plan.json")
     Path(plan_path).write_text(
         json.dumps(plan_data, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -234,8 +244,8 @@ def generate_tools(state: GraphState) -> GraphState:
 
     code_path = os.path.join(state["disease_dir"], "tools", "GenCode.py")
     os.makedirs(os.path.dirname(code_path), exist_ok=True)
-    if not os.path.exists(code_path):
-        Path(code_path).write_text("# Generated code\n", encoding="utf-8")
+    # Always start fresh to avoid duplicate function definitions
+    Path(code_path).write_text("# Generated code\n", encoding="utf-8")
 
     generated_names: list[str] = []
 
