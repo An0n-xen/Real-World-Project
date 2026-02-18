@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     deepinfra_base_url: str = "https://api.deepinfra.com/v1/openai"
 
     # ── Model names ────────────────────────────────────────────
-    primary_vlm_model: str = "Qwen/Qwen2.5-VL-32B-Instruct"
+    # primary_vlm_model: str = "Qwen/Qwen2.5-VL-32B-Instruct"
+    primary_vlm_model: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
     text_llm_model: str = "Qwen/Qwen2.5-72B-Instruct"
 
     # ── RAG ────────────────────────────────────────────────────

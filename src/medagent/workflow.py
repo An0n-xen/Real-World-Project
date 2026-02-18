@@ -10,6 +10,7 @@ from langgraph.graph import StateGraph, END
 from medagent.agents.analyzer import AnalyzerAgent
 from medagent.agents.coding_agent import CodingAgent
 from medagent.agents.decider import DeciderAgent
+from medagent.agents.disease_setup import DiseaseSetupAgent
 from medagent.agents.planner import PlannerAgent
 from medagent.agents.summarizer import SummaryAgent
 from medagent.config import get_settings
@@ -35,7 +36,9 @@ class GraphState(TypedDict, total=False):
 
     # inputs
     disease_dir: str
+    disease_name: str
     image_path: str
+    patient_context: str
 
     # task-level
     task_config: dict
@@ -81,6 +84,7 @@ _coder: CodingAgent | None = None
 _analyzer: AnalyzerAgent | None = None
 _summarizer: SummaryAgent | None = None
 _decider: DeciderAgent | None = None
+_setup_agent: DiseaseSetupAgent | None = None
 _registry: ToolRegistry | None = None
 
 
@@ -126,6 +130,13 @@ def _get_decider() -> DeciderAgent:
     return _decider
 
 
+def _get_setup_agent() -> DiseaseSetupAgent:
+    global _setup_agent
+    if _setup_agent is None:
+        _setup_agent = DiseaseSetupAgent()
+    return _setup_agent
+
+
 def _get_registry() -> ToolRegistry:
     global _registry
     if _registry is None:
@@ -142,12 +153,27 @@ def _get_registry() -> ToolRegistry:
 
 
 def load_config(state: GraphState) -> GraphState:
-    """Node 1: Load task.json and toolset.json from the disease directory."""
+    """Node 1: Load task.json and toolset.json from the disease directory.
+
+    If the disease directory doesn't exist, auto-creates it using
+    DiseaseSetupAgent (online search + LLM synthesis).
+    """
     disease_dir = state["disease_dir"]
+    disease_name = state.get("disease_name", Path(disease_dir).name)
     logger.info("Loading config from %s", disease_dir)
 
     task_path = os.path.join(disease_dir, "task.json")
     toolset_path = os.path.join(disease_dir, "toolset.json")
+
+    # Auto-setup if configs don't exist
+    if not os.path.exists(task_path) or not os.path.exists(toolset_path):
+        logger.info("Disease config not found — running auto-setup for '%s'", disease_name)
+        settings = get_settings()
+        setup_agent = _get_setup_agent()
+        context = state.get("patient_context", "")
+        disease_dir = setup_agent.setup(disease_name, settings.diseases_dir, patient_context=context)
+        task_path = os.path.join(disease_dir, "task.json")
+        toolset_path = os.path.join(disease_dir, "toolset.json")
 
     with open(task_path, "r", encoding="utf-8") as f:
         task_data = json.load(f)
@@ -172,6 +198,7 @@ def load_config(state: GraphState) -> GraphState:
 
     return {
         **state,
+        "disease_dir": disease_dir,
         "task_config": task_data,
         "toolset": toolset_data,
         "save_dir": save_dir,
@@ -196,6 +223,9 @@ def retrieve_guidelines(state: GraphState) -> GraphState:
         rag.load_guidelines(guidelines_dir)
 
     query = f"How to diagnose {disease}? What are the clinical guidelines and criteria?"
+    patient_context = state.get("patient_context", "")
+    if patient_context:
+        query += f" Patient context: {patient_context}"
     context = rag.query(query)
 
     logger.info("RAG context retrieved (%d chars)", len(context))
@@ -219,7 +249,8 @@ def generate_plan(state: GraphState) -> GraphState:
     toolset = [ToolDefinition(**t) for t in state["toolset"]]
 
     planner = _get_planner()
-    steps = planner.plan(task, toolset, state.get("rag_context", ""))
+    patient_context = state.get("patient_context", "")
+    steps = planner.plan(task, toolset, state.get("rag_context", ""), patient_context=patient_context)
 
     # Save plan
     plan_data = [s.model_dump() for s in steps]
@@ -297,6 +328,7 @@ def execute_steps(state: GraphState) -> GraphState:
 
     save_dir = state["save_dir"]
     image_path = state.get("image_path", "")
+    patient_context = state.get("patient_context", "")
     step_results = dict(state.get("step_results", {}))
     brief_diagnosis: dict = dict(state.get("brief_diagnosis", {}))
 
@@ -406,7 +438,7 @@ def execute_steps(state: GraphState) -> GraphState:
                     image_paths=image_inputs,
                     output_file=output_path,
                     field=step_key,
-                    text_context=text_inputs,
+                    text_context=([patient_context] if patient_context else []) + text_inputs,
                 )
 
                 # Summarise
@@ -490,10 +522,14 @@ def final_decision(state: GraphState) -> GraphState:
     indicators = [DiagnosticIndicator(**ind) for ind in state["indicators"]]
 
     decider = _get_decider()
+    patient_context = state.get("patient_context", "")
+    task_input = task_config.get("input", "")
+    if patient_context:
+        task_input += f"\nPatient context: {patient_context}"
     result = decider.decide_and_save(
         indicators=indicators,
         output_file=final_path,
-        task_input=task_config.get("input", ""),
+        task_input=task_input,
         disease_goal=task_config.get("disease", ""),
     )
 
@@ -539,27 +575,42 @@ def compile_workflow():
     return graph.compile()
 
 
-def run_diagnosis(disease_dir: str, image_path: str = "") -> dict:
+def run_diagnosis(
+    disease_dir: str,
+    image_path: str = "",
+    disease_name: str = "",
+    patient_context: str = "",
+) -> dict:
     """Run the full MedAgent-Pro diagnostic pipeline.
 
     Args:
         disease_dir: Path to the disease configuration directory
                      (containing task.json, toolset.json, guidelines/).
         image_path:  Path to the patient's medical image.
+        disease_name: Human-readable disease name for auto-setup.
+        patient_context: Additional patient context (history, symptoms, labs).
 
     Returns:
         The final graph state dict containing the diagnosis.
     """
+    if not disease_name:
+        disease_name = Path(disease_dir).name.replace("_", " ")
+
     logger.info("=" * 60)
     logger.info("MedAgent-Pro Diagnosis Pipeline")
-    logger.info("  disease_dir = %s", disease_dir)
-    logger.info("  image_path  = %s", image_path)
+    logger.info("  disease      = %s", disease_name)
+    logger.info("  disease_dir  = %s", disease_dir)
+    logger.info("  image_path   = %s", image_path)
+    if patient_context:
+        logger.info("  context      = %s", patient_context[:100])
     logger.info("=" * 60)
 
     workflow = compile_workflow()
     initial_state: GraphState = {
         "disease_dir": disease_dir,
+        "disease_name": disease_name,
         "image_path": image_path,
+        "patient_context": patient_context,
     }
 
     result = workflow.invoke(initial_state)

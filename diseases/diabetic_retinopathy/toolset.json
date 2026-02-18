@@ -1,0 +1,54 @@
+[
+    {
+        "id": 1,
+        "type": "Vision Language Model (VLM)",
+        "function": "Make qualitative analysis",
+        "input": "Any image, text or multi-modal input",
+        "output": "Qualitative analysis or description of certain features"
+    },
+    {
+        "id": 2,
+        "type": "segmentation model",
+        "function": "Segment microaneurysms",
+        "input": "Original fundus image",
+        "output": "Grayscale segmentation mask",
+        "command": "segment_microaneurysms()"
+    },
+    {
+        "id": 3,
+        "type": "segmentation model",
+        "function": "Segment hemorrhages",
+        "input": "Original fundus image",
+        "output": "Grayscale segmentation mask",
+        "command": "segment_hemorrhages()"
+    },
+    {
+        "id": 4,
+        "type": "segmentation model",
+        "function": "Segment hard exudates",
+        "input": "Original fundus image",
+        "output": "Grayscale segmentation mask",
+        "command": "segment_hard_exudates()"
+    },
+    {
+        "id": 5,
+        "type": "segmentation model",
+        "function": "Segment cotton wool spots",
+        "input": "Original fundus image",
+        "output": "Grayscale segmentation mask",
+        "command": "segment_cotton_wool_spots()"
+    },
+    {
+        "id": 6,
+        "type": "segmentation model",
+        "function": "Segment neovascularization",
+        "input": "Original fundus image",
+        "output": "Grayscale segmentation mask",
+        "command": "segment_neovascularization()"
+    },
+    {
+        "id": 7,
+        "type": "coding module",
+        "function": "Write simple code for indicator computation"
+    }
+]

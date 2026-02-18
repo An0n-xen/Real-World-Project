@@ -81,18 +81,31 @@ def cmd_diagnose(args: argparse.Namespace) -> None:
     from medagent.workflow import run_diagnosis
 
     settings = get_settings()
-    disease_dir = os.path.join(settings.diseases_dir, args.disease)
-
-    if not os.path.isdir(disease_dir):
-        logger.error("Disease directory not found: %s", disease_dir)
-        sys.exit(1)
+    disease_name = args.disease
+    dir_name = disease_name.lower().replace(" ", "_").replace("-", "_")
+    disease_dir = os.path.join(settings.diseases_dir, dir_name)
 
     image_path = args.image or ""
     if image_path and not os.path.exists(image_path):
         logger.error("Image file not found: %s", image_path)
         sys.exit(1)
 
-    result = run_diagnosis(disease_dir, image_path)
+    # Handle context: inline text or @filepath
+    patient_context = args.context or ""
+    if patient_context.startswith("@"):
+        ctx_file = patient_context[1:]
+        if os.path.exists(ctx_file):
+            patient_context = Path(ctx_file).read_text(encoding="utf-8")
+            logger.info("Loaded context from file: %s", ctx_file)
+        else:
+            logger.error("Context file not found: %s", ctx_file)
+            sys.exit(1)
+
+    result = run_diagnosis(
+        disease_dir, image_path,
+        disease_name=disease_name,
+        patient_context=patient_context,
+    )
 
     # Print final diagnosis
     diagnosis = result.get("diagnosis", {})
@@ -145,6 +158,10 @@ def main() -> None:
     p_diag = subparsers.add_parser("diagnose", help="Run full diagnostic pipeline")
     p_diag.add_argument("--disease", required=True, help="Disease name")
     p_diag.add_argument("--image", default="", help="Path to patient medical image")
+    p_diag.add_argument(
+        "--context", default="",
+        help="Patient context (history, symptoms, labs). Use @filepath to load from a file.",
+    )
 
     args = parser.parse_args()
 

@@ -1,0 +1,85 @@
+[
+  {
+    "id": 1,
+    "tool": [
+      2
+    ],
+    "action_type": "quantitative",
+    "action": "",
+    "input_type": [
+      0
+    ],
+    "output_type": "intermediate result",
+    "output_path": "microaneurysms_mask.png"
+  },
+  {
+    "id": 2,
+    "tool": [
+      3
+    ],
+    "action_type": "quantitative",
+    "action": "",
+    "input_type": [
+      0
+    ],
+    "output_type": "intermediate result",
+    "output_path": "hemorrhages_mask.png"
+  },
+  {
+    "id": 3,
+    "tool": [
+      4
+    ],
+    "action_type": "quantitative",
+    "action": "",
+    "input_type": [
+      0
+    ],
+    "output_type": "intermediate result",
+    "output_path": "hard_exudates_mask.png"
+  },
+  {
+    "id": 4,
+    "tool": [
+      5
+    ],
+    "action_type": "quantitative",
+    "action": "",
+    "input_type": [
+      0
+    ],
+    "output_type": "intermediate result",
+    "output_path": "cotton_wool_spots_mask.png"
+  },
+  {
+    "id": 5,
+    "tool": [
+      6
+    ],
+    "action_type": "quantitative",
+    "action": "",
+    "input_type": [
+      0
+    ],
+    "output_type": "intermediate result",
+    "output_path": "neovascularization_mask.png"
+  },
+  {
+    "id": 6,
+    "tool": [
+      1
+    ],
+    "action_type": "qualitative",
+    "action": "",
+    "input_type": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "output_type": "final indicator",
+    "output_path": "diagnosis.json"
+  }
+]

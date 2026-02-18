@@ -61,6 +61,7 @@ class PlannerAgent:
         task: TaskConfig,
         toolset: list[ToolDefinition],
         rag_context: str = "",
+        patient_context: str = "",
     ) -> list[PlanStep]:
         """Generate a diagnostic plan and return validated ``PlanStep`` list."""
         toolset_json = json.dumps(
@@ -72,6 +73,12 @@ class PlannerAgent:
             f"**Patient input:** {task.input}\n"
             f"**Diagnostic goal:** {task.disease}\n\n"
         )
+
+        if patient_context:
+            user_prompt += (
+                "**Patient context (history, symptoms, labs):**\n"
+                f"{patient_context}\n\n"
+            )
 
         if rag_context:
             user_prompt += (
