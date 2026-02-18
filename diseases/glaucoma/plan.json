@@ -47,8 +47,7 @@
     "action_type": "qualitative",
     "action": "",
     "input_type": [
-      0,
-      3
+      0
     ],
     "output_type": "final indicator",
     "output_path": "diagnosis.json"
@@ -100,24 +99,11 @@
     "action_type": "qualitative",
     "action": "",
     "input_type": [
-      0
-    ],
-    "output_type": "final indicator",
-    "output_path": "diagnosis.json"
-  },
-  {
-    "id": 9,
-    "tool": [
-      1
-    ],
-    "action_type": "qualitative",
-    "action": "",
-    "input_type": [
+      3,
       4,
       5,
       6,
-      7,
-      8
+      7
     ],
     "output_type": "final indicator",
     "output_path": "diagnosis.json"

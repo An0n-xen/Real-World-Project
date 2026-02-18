@@ -31,8 +31,9 @@ class SummaryAgent:
             model=settings.text_llm_model,
             api_key=settings.deepinfra_api_key,
             base_url=settings.deepinfra_base_url,
-            temperature=0.1,
+            temperature=0,
             max_tokens=1024,
+            model_kwargs={"seed": 42},
         )
         logger.info("SummaryAgent ready  model=%s", settings.text_llm_model)
 

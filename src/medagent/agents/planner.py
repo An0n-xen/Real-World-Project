@@ -52,6 +52,7 @@ class PlannerAgent:
             base_url=settings.deepinfra_base_url,
             temperature=0,
             max_tokens=4096,
+            model_kwargs={"seed": 42},
         )
         logger.info("PlannerAgent ready  model=%s", settings.text_llm_model)
 

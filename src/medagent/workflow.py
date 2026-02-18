@@ -349,6 +349,34 @@ def execute_steps(state: GraphState) -> GraphState:
                     logger.exception("Step %d failed", step.id)
 
         elif step.action_type.lower() == "qualitative":
+            # Check if result is already cached from a previous run
+            step_key = f"step_{step.id}"
+            output_path = os.path.join(save_dir, step.output_path)
+            brief_path = os.path.join(save_dir, "brief_diagnosis.json")
+
+            cached_diagnosis: dict = {}
+            cached_brief: dict = {}
+            if os.path.exists(output_path):
+                try:
+                    cached_diagnosis = json.loads(
+                        Path(output_path).read_text(encoding="utf-8")
+                    )
+                except (json.JSONDecodeError, OSError):
+                    pass
+            if os.path.exists(brief_path):
+                try:
+                    cached_brief = json.loads(
+                        Path(brief_path).read_text(encoding="utf-8")
+                    )
+                except (json.JSONDecodeError, OSError):
+                    pass
+
+            if step_key in cached_diagnosis and step_key in cached_brief:
+                logger.info("Step %d using cached result — skipping VLM call", step.id)
+                brief_diagnosis = cached_brief
+                step_results[step_key] = "success"
+                continue
+
             # Run qualitative VLM analysis
             image_inputs: list[str] = []
             text_inputs: list[str] = []
@@ -373,17 +401,15 @@ def execute_steps(state: GraphState) -> GraphState:
                                     pass
 
             try:
-                output_path = os.path.join(save_dir, step.output_path)
                 result = analyzer.analyze_and_save(
                     prompt=step.action,
                     image_paths=image_inputs,
                     output_file=output_path,
-                    field=f"step_{step.id}",
+                    field=step_key,
                     text_context=text_inputs,
                 )
 
                 # Summarise
-                brief_path = os.path.join(save_dir, "brief_diagnosis.json")
                 summary = summarizer.summarize(
                     json.dumps(result, indent=2),
                     task_question=step.action,
@@ -397,17 +423,17 @@ def execute_steps(state: GraphState) -> GraphState:
                         )
                     except (json.JSONDecodeError, OSError):
                         pass
-                existing_brief[f"step_{step.id}"] = summary
+                existing_brief[step_key] = summary
                 Path(brief_path).write_text(
                     json.dumps(existing_brief, indent=2, ensure_ascii=False),
                     encoding="utf-8",
                 )
                 brief_diagnosis = existing_brief
 
-                step_results[f"step_{step.id}"] = "success"
+                step_results[step_key] = "success"
                 logger.info("Step %d qualitative analysis complete", step.id)
             except Exception:
-                step_results[f"step_{step.id}"] = "error"
+                step_results[step_key] = "error"
                 logger.exception("Step %d qualitative analysis failed", step.id)
 
     return {
@@ -438,14 +464,35 @@ def collect_indicators(state: GraphState) -> GraphState:
 
 
 def final_decision(state: GraphState) -> GraphState:
-    """Node 7: Decider agent produces the final diagnosis."""
+    """Node 7: Decider agent produces the final diagnosis.
+
+    Reuses cached final_diagnosis.json if it already contains results.
+    """
     task_config = state["task_config"]
+    final_path = os.path.join(state["save_dir"], "final_diagnosis.json")
+
+    # Check for cached result
+    if os.path.exists(final_path):
+        try:
+            cached = json.loads(Path(final_path).read_text(encoding="utf-8"))
+            if "overall" in cached:
+                logger.info("Using cached final diagnosis — skipping Decider call")
+                diag = cached["overall"]
+                logger.info(
+                    "Final diagnosis: %s (confidence=%.2f)",
+                    diag.get("diagnosis", "?"),
+                    diag.get("confidence", 0),
+                )
+                return {**state, "diagnosis": diag}
+        except (json.JSONDecodeError, OSError):
+            pass
+
     indicators = [DiagnosticIndicator(**ind) for ind in state["indicators"]]
 
     decider = _get_decider()
     result = decider.decide_and_save(
         indicators=indicators,
-        output_file=os.path.join(state["save_dir"], "final_diagnosis.json"),
+        output_file=final_path,
         task_input=task_config.get("input", ""),
         disease_goal=task_config.get("disease", ""),
     )
