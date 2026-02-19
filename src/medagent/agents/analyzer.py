@@ -63,7 +63,7 @@ class AnalyzerAgent:
             base_url=settings.deepinfra_base_url,
             temperature=0,
             max_tokens=2048,
-            model_kwargs={"seed": 42},
+            seed=42,
         )
         logger.info("AnalyzerAgent ready  model=%s", settings.primary_vlm_model)
 

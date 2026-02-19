@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedAgent-Pro — AI Medical Diagnosis</title>
+    <meta name="description" content="Evidence-based multi-modal medical diagnosis powered by agentic AI workflows." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <!-- ═══ Header ═══ -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none">
+                        <circle cx="20" cy="20" r="18" stroke="url(#grad)" stroke-width="2" />
+                        <path d="M20 10v20M10 20h20" stroke="url(#grad)" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="20" cy="20" r="6" fill="url(#grad)" opacity="0.3" />
+                        <defs>
+                            <linearGradient id="grad" x1="0" y1="0" x2="40" y2="40">
+                                <stop stop-color="#00e5ff" />
+                                <stop offset="1" stop-color="#00e676" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1>MedAgent-Pro</h1>
+                    <p class="tagline">Evidence-Based AI Diagnostic Pipeline</p>
+                </div>
+            </div>
+            <nav class="header-nav">
+                <button class="nav-btn active" data-view="diagnose" id="nav-diagnose">
+                    <span class="nav-icon">⚕</span> New Diagnosis
+                </button>
+                <button class="nav-btn" data-view="history" id="nav-history">
+                    <span class="nav-icon">📋</span> History
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="app-main">
+        <!-- Diagnosis Form View -->
+        <section class="view active" id="view-diagnose">
+            <div class="form-card glass-panel">
+                <h2 class="section-title">
+                    <span class="title-accent"></span>
+                    Run Diagnostic Analysis
+                </h2>
+                <form id="diagnosis-form" class="diagnosis-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="disease-input">Disease / Condition</label>
+                            <input type="text" id="disease-input" name="disease"
+                                   placeholder="e.g. diabetic retinopathy, glaucoma…"
+                                   required autocomplete="off" />
+                            <div class="input-hint" id="disease-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="context-input">Patient Context</label>
+                        <textarea id="context-input" name="patient_context" rows="4"
+                                  placeholder="e.g. 55-year-old male, Type 2 diabetes for 10 years, HbA1c 8.2%, blurred vision…"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="image-input">Medical Image <span class="optional">(optional)</span></label>
+                        <div class="file-upload" id="file-upload-area">
+                            <input type="file" id="image-input" name="image" accept="image/*" />
+                            <div class="upload-placeholder" id="upload-placeholder">
+                                <span class="upload-icon">📷</span>
+                                <span>Drop an image here or <em>browse</em></span>
+                            </div>
+                            <div class="upload-preview" id="upload-preview" style="display:none;">
+                                <img id="preview-img" alt="Preview" />
+                                <button type="button" class="remove-btn" id="remove-image">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="submit-btn">
+                        <span class="btn-text">Run Diagnosis</span>
+                        <span class="btn-loader" style="display:none;"></span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- History View -->
+        <section class="view" id="view-history">
+            <div class="glass-panel">
+                <h2 class="section-title">
+                    <span class="title-accent"></span>
+                    Past Diagnoses
+                </h2>
+                <div class="results-list" id="results-list">
+                    <p class="placeholder-text">Loading…</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ Results Dashboard ═══ -->
+        <section class="results-dashboard" id="results-dashboard" style="display:none;">
+            <!-- Top bar -->
+            <div class="dashboard-header glass-panel">
+                <button class="back-btn" id="back-btn">← Back</button>
+                <h2 id="dashboard-title">Diagnosis Results</h2>
+                <span class="badge" id="dashboard-badge"></span>
+            </div>
+
+            <!-- FINDINGS RELATIONSHIP GRAPH — full width -->
+            <div class="glass-panel findings-graph-panel">
+                <h3 class="panel-title">🔗 Findings Relationship Graph</h3>
+                <p class="graph-subtitle">How observations, medical concepts, and evidence relate to the final conclusion</p>
+                <canvas id="findings-canvas" width="900" height="520"></canvas>
+                <div class="findings-legend">
+                    <span class="legend-item"><span class="dot" style="background:#00e676;"></span> Diagnosis</span>
+                    <span class="legend-item"><span class="dot" style="background:#00e5ff;"></span> Supporting Evidence</span>
+                    <span class="legend-item"><span class="dot" style="background:#ffab40;"></span> Opposing Evidence</span>
+                    <span class="legend-item"><span class="dot" style="background:#ff5274;"></span> Condition</span>
+                    <span class="legend-item"><span class="dot" style="background:#b388ff;"></span> Anatomy</span>
+                    <span class="legend-item"><span class="dot" style="background:#69f0ae;"></span> Measurement</span>
+                    <span class="legend-item"><span class="legend-line solid"></span> Direct link</span>
+                    <span class="legend-item"><span class="legend-line dashed"></span> Cross-relation</span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- LEFT: Diagnosis Result + Reasoning -->
+                <div class="center-column">
+                    <!-- Diagnosis Card -->
+                    <div class="glass-panel diagnosis-card">
+                        <h3 class="panel-title">Final Diagnosis</h3>
+                        <div class="diagnosis-body" id="diagnosis-body">
+                            <p class="placeholder-text">No results yet.</p>
+                        </div>
+                    </div>
+
+                    <!-- Reasoning Chain -->
+                    <div class="glass-panel reasoning-panel">
+                        <h3 class="panel-title">Reasoning Chain</h3>
+                        <div class="reasoning-list" id="reasoning-list">
+                            <p class="placeholder-text">No reasoning data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Pipeline + Stats + Concepts -->
+                <div class="right-column">
+                    <!-- Pipeline Stats -->
+                    <div class="glass-panel stats-panel">
+                        <h3 class="panel-title">Pipeline Stats</h3>
+                        <div class="stats-grid" id="stats-grid"></div>
+                    </div>
+
+                    <!-- Pipeline Execution Graph (compact) -->
+                    <div class="glass-panel graph-panel">
+                        <h3 class="panel-title">Pipeline Execution</h3>
+                        <canvas id="pipeline-canvas" width="300" height="500"></canvas>
+                        <div class="graph-legend">
+                            <span class="legend-item"><span class="dot dot-completed"></span> Completed</span>
+                            <span class="legend-item"><span class="dot dot-running"></span> Running</span>
+                            <span class="legend-item"><span class="dot dot-error"></span> Error</span>
+                            <span class="legend-item"><span class="dot dot-pending"></span> Pending</span>
+                        </div>
+                    </div>
+
+                    <!-- Medical Concepts -->
+                    <div class="glass-panel concepts-panel">
+                        <h3 class="panel-title">Medical Concepts</h3>
+                        <div class="concepts-list" id="concepts-list">
+                            <p class="placeholder-text">No concepts extracted.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══ Tooltips ═══ -->
+    <div class="node-tooltip" id="node-tooltip" style="display:none;">
+        <div class="tooltip-header" id="tooltip-header"></div>
+        <div class="tooltip-body" id="tooltip-body"></div>
+    </div>
+    <div class="node-tooltip" id="findings-tooltip" style="display:none;">
+        <div class="tooltip-header"></div>
+        <div class="tooltip-body"></div>
+    </div>
+
+    <script src="/static/graph.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

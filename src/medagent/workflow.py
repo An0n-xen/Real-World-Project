@@ -2,8 +2,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import traceback
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Callable, TypedDict
 
 from langgraph.graph import StateGraph, END
 
@@ -24,6 +25,8 @@ from medagent.schemas import (
 )
 from medagent.tools.medical_tools import segment_optic_cup, segment_optic_disc
 from medagent.tools.registry import ToolRegistry
+from medagent.tracer import PipelineTracer
+from medagent.knowledge.concept_linker import ConceptLinker
 
 logger = get_logger(__name__)
 
@@ -56,6 +59,9 @@ class GraphState(TypedDict, total=False):
     # tool management
     tool_registry_names: list[str]
     gen_code_path: str
+
+    # observability
+    _tracer: Any  # PipelineTracer (Any to avoid TypedDict issues)
 
     # output
     diagnosis: dict
@@ -145,6 +151,16 @@ def _get_registry() -> ToolRegistry:
         _registry.register("segment_optic_cup", segment_optic_cup)
         _registry.register("segment_optic_disc", segment_optic_disc)
     return _registry
+
+
+_concept_linker: ConceptLinker | None = None
+
+
+def _get_concept_linker() -> ConceptLinker:
+    global _concept_linker
+    if _concept_linker is None:
+        _concept_linker = ConceptLinker()
+    return _concept_linker
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -463,6 +479,15 @@ def execute_steps(state: GraphState) -> GraphState:
                 brief_diagnosis = existing_brief
 
                 step_results[step_key] = "success"
+
+                # Concept linking: extract medical concepts from VLM observation
+                try:
+                    linker = _get_concept_linker()
+                    obs_text = json.dumps(result, default=str) if isinstance(result, dict) else str(result)
+                    concepts_path = os.path.join(save_dir, "concepts.json")
+                    linker.extract_and_save(obs_text, concepts_path, field=step_key)
+                except Exception:
+                    logger.debug("Concept linking skipped for step %d", step.id)
                 logger.info("Step %d qualitative analysis complete", step.id)
             except Exception:
                 step_results[step_key] = "error"
@@ -542,18 +567,47 @@ def final_decision(state: GraphState) -> GraphState:
 # ═══════════════════════════════════════════════════════════════════
 
 
+def _traced(node_fn: Callable, node_name: str) -> Callable:
+    """Wrap a node function with tracing (start/end + error capture)."""
+
+    def wrapper(state: GraphState) -> GraphState:
+        tracer: PipelineTracer | None = state.get("_tracer")
+        inputs = {
+            k: v for k, v in state.items()
+            if k not in ("_tracer",) and isinstance(v, (str, int, float, bool))
+        }
+        if tracer:
+            tracer.start_node(node_name, inputs=inputs)
+        try:
+            result = node_fn(state)
+            if tracer:
+                outputs = {
+                    k: v for k, v in result.items()
+                    if k not in ("_tracer",) and isinstance(v, (str, int, float, bool))
+                }
+                tracer.end_node(node_name, outputs=outputs)
+            return result
+        except Exception as exc:
+            if tracer:
+                tracer.end_node(node_name, error=f"{exc.__class__.__name__}: {exc}")
+            raise
+
+    wrapper.__name__ = node_name
+    return wrapper
+
+
 def build_workflow() -> StateGraph:
     """Build and return the compiled MedAgent-Pro LangGraph workflow."""
     graph = StateGraph(GraphState)
 
-    # Add nodes
-    graph.add_node("load_config", load_config)
-    graph.add_node("retrieve_guidelines", retrieve_guidelines)
-    graph.add_node("generate_plan", generate_plan)
-    graph.add_node("generate_tools", generate_tools)
-    graph.add_node("execute_steps", execute_steps)
-    graph.add_node("collect_indicators", collect_indicators)
-    graph.add_node("final_decision", final_decision)
+    # Add nodes (wrapped with tracing)
+    graph.add_node("load_config", _traced(load_config, "load_config"))
+    graph.add_node("retrieve_guidelines", _traced(retrieve_guidelines, "retrieve_guidelines"))
+    graph.add_node("generate_plan", _traced(generate_plan, "generate_plan"))
+    graph.add_node("generate_tools", _traced(generate_tools, "generate_tools"))
+    graph.add_node("execute_steps", _traced(execute_steps, "execute_steps"))
+    graph.add_node("collect_indicators", _traced(collect_indicators, "collect_indicators"))
+    graph.add_node("final_decision", _traced(final_decision, "final_decision"))
 
     # Define linear flow
     graph.set_entry_point("load_config")
@@ -605,15 +659,32 @@ def run_diagnosis(
         logger.info("  context      = %s", patient_context[:100])
     logger.info("=" * 60)
 
+    # Create tracer for observability
+    tracer = PipelineTracer(
+        disease=disease_name,
+        image_path=image_path,
+        patient_context=patient_context,
+    )
+
     workflow = compile_workflow()
     initial_state: GraphState = {
         "disease_dir": disease_dir,
         "disease_name": disease_name,
         "image_path": image_path,
         "patient_context": patient_context,
+        "_tracer": tracer,
     }
 
     result = workflow.invoke(initial_state)
+
+    # Record final diagnosis and save trace + report
+    if result.get("diagnosis"):
+        tracer.set_final_diagnosis(result["diagnosis"])
+
+    save_dir = result.get("save_dir", "")
+    if save_dir:
+        tracer.save_trace(save_dir)
+        tracer.generate_report(save_dir)
 
     logger.info("=" * 60)
     logger.info("Pipeline complete")

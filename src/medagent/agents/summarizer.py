@@ -33,7 +33,7 @@ class SummaryAgent:
             base_url=settings.deepinfra_base_url,
             temperature=0,
             max_tokens=1024,
-            model_kwargs={"seed": 42},
+            seed=42,
         )
         logger.info("SummaryAgent ready  model=%s", settings.text_llm_model)
 

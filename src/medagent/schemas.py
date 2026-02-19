@@ -67,6 +67,30 @@ class DiagnosisResult(BaseModel):
     weights: list[WeightedIndicator] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     notes: str = ""
+    reasoning_chain: list["ReasoningStep"] = Field(default_factory=list)
+
+
+class ReasoningStep(BaseModel):
+    """One step in the diagnostic reasoning chain (DR.KNOWS-inspired)."""
+
+    observation: str = Field(..., description="What was observed (e.g. 'elevated cup-to-disc ratio')")
+    clinical_significance: str = Field(
+        default="", description="Why this matters clinically"
+    )
+    supports_diagnosis: bool = Field(
+        default=True, description="True if this supports positive diagnosis"
+    )
+    confidence_contribution: float = Field(
+        default=0.0, description="How much this contributes to overall confidence"
+    )
+
+
+class ReasoningChain(BaseModel):
+    """Full reasoning chain for a diagnostic decision."""
+
+    steps: list[ReasoningStep] = Field(default_factory=list)
+    conclusion: str = ""
+    confidence_justification: str = ""
 
 
 # ── LangGraph state ───────────────────────────────────────────────

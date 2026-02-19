@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-from duckduckgo_search import DDGS
+from serpapi import GoogleSearch
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -77,23 +77,32 @@ class DiseaseSetupAgent:
             base_url=settings.deepinfra_base_url,
             temperature=0,
             max_tokens=4096,
-            model_kwargs={"seed": 42},
+            seed=42,
         )
-        self._ddgs = DDGS()
+        self._serpapi_key = settings.serpapi_api_key
         logger.info("DiseaseSetupAgent ready  model=%s", settings.text_llm_model)
 
     def _search_guidelines(self, disease: str, patient_context: str = "", max_results: int = 8) -> str:
-        """Search DuckDuckGo for clinical guidelines and return combined snippets."""
+        """Search Google via SerpAPI for clinical guidelines and return combined snippets."""
         query = f"clinical diagnostic guidelines criteria for {disease}"
         if patient_context:
-            # Add key terms from context to refine search
             query += f" {patient_context[:100]}"
         logger.info("Searching online: %s", query)
 
+        if not self._serpapi_key:
+            logger.warning("No SerpAPI key set — will rely on LLM knowledge")
+            return f"No search results available. Use your medical knowledge about {disease}."
+
         try:
-            results = list(self._ddgs.text(query, max_results=max_results))
+            search = GoogleSearch({
+                "q": query,
+                "api_key": self._serpapi_key,
+                "num": max_results,
+            })
+            data = search.get_dict()
+            results = data.get("organic_results", [])
         except Exception:
-            logger.exception("DuckDuckGo search failed")
+            logger.exception("SerpAPI search failed")
             results = []
 
         if not results:
@@ -103,9 +112,9 @@ class DiseaseSetupAgent:
         snippets = []
         for r in results:
             title = r.get("title", "")
-            body = r.get("body", "")
-            href = r.get("href", "")
-            snippets.append(f"### {title}\nSource: {href}\n{body}")
+            snippet = r.get("snippet", "")
+            link = r.get("link", "")
+            snippets.append(f"### {title}\nSource: {link}\n{snippet}")
 
         combined = "\n\n".join(snippets)
         logger.info("Retrieved %d search results (%d chars)", len(results), len(combined))
