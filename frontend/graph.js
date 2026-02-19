@@ -257,12 +257,12 @@ class FindingsGraph {
         this.running = false;
 
         // Physics tunables
-        this.REPULSION = 4000;      // node-node repulsion strength
-        this.ATTRACTION = 0.008;    // edge spring constant
-        this.CENTER_GRAVITY = 0.02; // pull toward canvas center
-        this.DAMPING = 0.88;        // velocity decay per tick
-        this.COLLISION_PAD = 6;     // extra spacing between nodes
-        this.MAX_SPEED = 8;         // velocity cap
+        this.REPULSION = 6000;      // stronger repulsion
+        this.ATTRACTION = 0.002;    // weaker spring force (looser)
+        this.CENTER_GRAVITY = 0.003;// very weak center pull
+        this.DAMPING = 0.88;        // existing damping
+        this.COLLISION_PAD = 15;    // more personal space
+        this.MAX_SPEED = 8;         // existing speed cap
 
         // Mouse state
         this._mouseX = 0;
@@ -335,7 +335,7 @@ class FindingsGraph {
 
         // 2. Reasoning observations (Ring 1)
         const chain = reasoningChain || [];
-        const ring1R = Math.min(cw, ch) * 0.26;
+        const ring1R = Math.min(cw, ch) * 0.35; // increased from 0.26
 
         chain.forEach((step, i) => {
             const angle = (i / chain.length) * Math.PI * 2 - Math.PI / 2;
@@ -362,7 +362,7 @@ class FindingsGraph {
                 from: nodeId, to: 'diagnosis',
                 weight: step.confidence_contribution || 0.05,
                 supports: step.supports_diagnosis !== false,
-                restLength: ring1R * 0.9,
+                restLength: ring1R * 1.1, // longer rest length
             });
         });
 
@@ -379,7 +379,7 @@ class FindingsGraph {
             }
 
             const topConcepts = allConcepts.slice(0, 18);
-            const ring2R = Math.min(cw, ch) * 0.42;
+            const ring2R = Math.min(cw, ch) * 0.48; // increased from 0.42
 
             topConcepts.forEach((c, i) => {
                 const angle = (i / topConcepts.length) * Math.PI * 2 - Math.PI / 2;
@@ -421,7 +421,7 @@ class FindingsGraph {
                     weight: 0.03,
                     supports: true,
                     secondary: true,
-                    restLength: (bestObs && bestScore >= 1) ? ring2R * 0.5 : ring2R * 0.8,
+                    restLength: (bestObs && bestScore >= 1) ? ring2R * 0.7 : ring2R * 1.25, // increased spacing
                 });
             });
         }
@@ -437,7 +437,7 @@ class FindingsGraph {
                     this.graphEdges.push({
                         from: `obs_${i}`, to: `obs_${j}`,
                         weight: 0.02, supports: true,
-                        crossLink: true, restLength: ring1R * 0.7,
+                        crossLink: true, restLength: ring1R * 0.9, // looser cross links
                     });
                 }
             }
