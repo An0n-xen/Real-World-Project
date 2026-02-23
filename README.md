@@ -118,6 +118,16 @@ Create a structured diagnostic workflow for a disease:
 uv run python main.py plan --disease glaucoma
 ```
 
+#### Start the API & Web UI
+You can run the FastAPI backend and interact with the web UI or API docs in your browser:
+```bash
+# Start the Uvicorn server on port 8000
+uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+- **Web UI:** [http://localhost:8000/](http://localhost:8000/)
+- **API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **API Docs (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
 #### Run Full Diagnosis
 Execute the complete pipeline on a patient image:
 ```bash
