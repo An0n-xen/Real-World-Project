@@ -20,10 +20,11 @@ The platform implements a **hierarchical diagnostic workflow**:
 | **Framework** | LangChain + LangGraph |
 | **VLM** | Qwen/Qwen2.5-VL-32B-Instruct (via DeepInfra) |
 | **Text LLM** | Qwen/Qwen2.5-72B-Instruct (via DeepInfra) |
-| **Embeddings** | BAAI/bge-large-en-v1.5 (via DeepInfra) |
+| **Embedding** | BAAI/bge-large-en-v1.5 (via DeepInfra) |
 | **Vector Store** | ChromaDB |
+| **Web Search** | SerpAPI (Google Search) |
 | **Logging** | colorlog (color-coded, structured) |
-| **Package Manager** | uv |
+| **Package Manager**| uv |
 | **Schemas** | Pydantic v2 |
 
 ---
@@ -40,8 +41,11 @@ Real-World-Project/
 │       ├── __init__.py
 │       ├── config.py                # Pydantic-settings configuration
 │       ├── logger.py                # Colorlog factory
-│       ├── schemas.py               # Data models (TaskConfig, PlanStep, etc.)
+│       ├── schemas.py               # Data models (TaskConfig, PlanStep, ReasoningChain, etc.)
 │       ├── workflow.py              # LangGraph 7-node pipeline
+│       ├── tracer.py                # DR.KNOWS: Pipeline observability & metrics
+│       ├── knowledge/
+│       │   └── concept_linker.py    # DR.KNOWS: UMLS-style medical concept extraction
 │       ├── rag/
 │       │   └── retriever.py         # ChromaDB + DeepInfra embeddings
 │       ├── agents/
@@ -59,6 +63,14 @@ Real-World-Project/
         ├── toolset.json             # Available tools
         └── guidelines/
             └── glaucoma_guidelines.md  # Clinical criteria (CDR, ISNT, etc.)
+├── output/
+│   └── glaucoma/
+│       └── record/
+│           └── fundus/
+│               ├── pipeline_trace.json   # Full execution timings and I/O
+│               ├── reasoning_trace.json  # Step-by-step clinical reasoning chain
+│               ├── concepts.json         # Extracted standardized medical entities
+│               └── diagnosis_report.md   # Human-readable final report
 ```
 
 ---
@@ -85,10 +97,11 @@ uv sync
 cp .env.example .env
 ```
 
-Edit `.env` and add your DeepInfra API key:
+Edit `.env` and add your API keys:
 
 ```env
-DEEPINFRA_API_KEY=your_key_here
+DEEPINFRA_API_KEY=your_deepinfra_key_here
+SERPAPI_API_KEY=your_serpapi_key_here
 ```
 
 ### 4. Usage
@@ -126,12 +139,20 @@ Dynamically generates Python functions for quantitative computation steps (e.g.,
 
 ###  Analyzer Agent (`agents/analyzer.py`)
 Sends medical images (base64-encoded) to the multi-modal VLM for qualitative assessment — detecting abnormalities, noting visual features, and providing confidence scores.
+**DR.KNOWS Feature:** Results are automatically passed through the `ConceptLinker` to extract standardized medical terminology (UMLS-style) from the free-text observation.
 
 ###  Summary Agent (`agents/summarizer.py`)
 Condenses detailed VLM analysis into brief clinical summaries with severity ratings and key findings.
 
 ###  Decider Agent (`agents/decider.py`)
 Synthesises all diagnostic indicators by proposing clinical weights and a decision threshold. Computes a weighted abnormality score and produces the final diagnosis.
+**DR.KNOWS Feature:** Generates explicit step-by-step reasoning chains mapping clinical observations to the final diagnostic conclusion.
+
+###  Disease Setup Agent (`agents/disease_setup.py`)
+Automatically bootstraps new diseases by using **SerpAPI** to search Google for the latest clinical guidelines, synthesizing them with the LLM to generate `task.json`, `toolset.json`, and formatting the `guidelines.md`.
+
+###  Pipeline Tracer (`tracer.py`)
+**DR.KNOWS Feature:** Captures granular execution metadata for every node in the graph (start/end times, input/output data, errors) to ensure complete auditability of the AI's diagnostic process. Outputs are saved in `pipeline_trace.json` and a human-readable `diagnosis_report.md`.
 
 ---
 
@@ -173,7 +194,8 @@ All settings can be overridden via environment variables or `.env`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DEEPINFRA_API_KEY` | — | DeepInfra API key (required) |
-| `PRIMARY_VLM_MODEL` | `Qwen/Qwen2.5-VL-32B-Instruct` | Multi-modal VLM |
+| `SERPAPI_API_KEY` | — | SerpAPI key for online guideline search |
+| `PRIMARY_VLM_MODEL` | `Qwen/Qwen3-VL-235B-A22B-Instruct` | Multi-modal VLM |
 | `TEXT_LLM_MODEL` | `Qwen/Qwen2.5-72B-Instruct` | Text-only LLM |
 | `EMBEDDING_MODEL` | `BAAI/bge-large-en-v1.5` | Embedding model |
 | `LOG_LEVEL` | `INFO` | Logging level |
@@ -204,6 +226,7 @@ Register new tools in `tools/registry.py` or add them to `toolset.json`.
 ## References
 
 - **Paper**: [MedAgent-Pro: Towards Evidence-based Multi-modal Medical Diagnosis via Reasoning Agentic Workflow](https://arxiv.org/abs/2503.18968)
+- **Paper**: [DR.KNOWS: Leveraging Medical Knowledge Graphs Into Large Language Models for Diagnosis Prediction](https://arxiv.org/abs/2308.14321)
 - **Original Repo**: [jinlab-imvr/MedAgent-Pro](https://github.com/jinlab-imvr/MedAgent-Pro)
 
 ---
