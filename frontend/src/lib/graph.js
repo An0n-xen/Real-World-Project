@@ -340,7 +340,7 @@ class FindingsGraph {
             type: 'diagnosis',
             x: cx, y: cy,
             vx: 0, vy: 0,
-            r: 46,
+            r: 52,
             fixed: true,   // diagnosis stays in center
             detail: diagnosis?.notes || '',
             contribution: diagnosis?.confidence || 0,
@@ -358,13 +358,13 @@ class FindingsGraph {
             this.graphNodes.push({
                 id: nodeId,
                 label: step.observation || `Observation ${i + 1}`,
-                shortLabel: this._truncate(step.observation || '', 24),
+                shortLabel: step.observation || `Observation ${i + 1}`,
                 type: step.supports_diagnosis !== false ? 'evidence' : 'symptom',
                 x: cx + Math.cos(angle) * ring1R + jitter,
                 y: cy + Math.sin(angle) * ring1R + jitter,
                 vx: (Math.random() - 0.5) * 2,
                 vy: (Math.random() - 0.5) * 2,
-                r: 30,
+                r: 36,
                 fixed: false,
                 detail: step.clinical_significance || '',
                 contribution: step.confidence_contribution || 0,
@@ -403,13 +403,13 @@ class FindingsGraph {
                 this.graphNodes.push({
                     id: nodeId,
                     label: c.name,
-                    shortLabel: this._truncate(c.name, 16),
+                    shortLabel: c.name,
                     type: cat,
                     x: cx + Math.cos(angle) * ring2R + jitter,
                     y: cy + Math.sin(angle) * ring2R + jitter,
                     vx: (Math.random() - 0.5) * 1.5,
                     vy: (Math.random() - 0.5) * 1.5,
-                    r: 18,
+                    r: 26,
                     fixed: false,
                     detail: c.relevance || c.original_text || '',
                     contribution: 0,
@@ -614,50 +614,57 @@ class FindingsGraph {
         const ctx = this.ctx;
         ctx.save();
 
-        const lineWidth = edge.secondary ? 1 : Math.max(1.5, edge.weight * 15);
         const isHighlighted = this.hoveredNode && (this.hoveredNode.id === edge.from || this.hoveredNode.id === edge.to);
-        const alpha = isHighlighted ? 0.6 : (edge.crossLink ? 0.12 : edge.secondary ? 0.15 : 0.3);
+        const alpha = isHighlighted ? 1.0 : (edge.crossLink ? 0.35 : edge.secondary ? 0.45 : 0.7);
+        
+        // Thicker, more visible lines for light theme
+        let baseLineW = edge.secondary ? 1.5 : Math.max(2, edge.weight * 10);
+        const lineWidth = isHighlighted ? baseLineW + 1.5 : baseLineW;
 
         ctx.globalAlpha = alpha;
-        ctx.lineWidth = isHighlighted ? lineWidth + 0.5 : lineWidth;
+        ctx.lineWidth = lineWidth;
 
         if (edge.supports === false) {
-            ctx.strokeStyle = '#ff5274';
+            ctx.strokeStyle = '#F43F5E';
         } else if (edge.crossLink) {
-            ctx.strokeStyle = '#5a6785';
+            ctx.strokeStyle = '#94A3B8';
             ctx.setLineDash([4, 4]);
         } else if (edge.secondary) {
-            ctx.strokeStyle = '#3a4a6a';
+            ctx.strokeStyle = '#CBD5E1';
         } else {
             const grad = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
-            grad.addColorStop(0, FindingsGraph.CATEGORY_COLORS[from.type]?.fill || '#00e5ff');
-            grad.addColorStop(1, FindingsGraph.CATEGORY_COLORS[to.type]?.fill || '#00e676');
+            grad.addColorStop(0, FindingsGraph.CATEGORY_COLORS[from.type]?.fill || '#0EA5E9');
+            grad.addColorStop(1, FindingsGraph.CATEGORY_COLORS[to.type]?.fill || '#10B981');
             ctx.strokeStyle = grad;
         }
 
-        // Curved line
+        // Clean straight lines for secondary, bezier for primary
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
-        const mx = (from.x + to.x) / 2;
-        const my = (from.y + to.y) / 2;
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const curveOff = edge.crossLink ? 25 : 0;
-        ctx.quadraticCurveTo(mx + dy * 0.08 + curveOff, my - dx * 0.08 + curveOff, to.x, to.y);
+        
+        if (edge.crossLink || edge.secondary) {
+            ctx.lineTo(to.x, to.y);
+        } else {
+            const mx = (from.x + to.x) / 2;
+            const my = (from.y + to.y) / 2;
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            ctx.quadraticCurveTo(mx + dy * 0.05, my - dx * 0.05, to.x, to.y);
+        }
         ctx.stroke();
 
-        // Arrows on primary edges
+        // Elegant minimal arrows
         if (!edge.secondary && !edge.crossLink) {
             const angle = Math.atan2(to.y - from.y, to.x - from.x);
-            const ad = to.r + 5;
+            const ad = to.r + 6;
             const ax = to.x - Math.cos(angle) * ad;
             const ay = to.y - Math.sin(angle) * ad;
-            ctx.globalAlpha = alpha + 0.15;
+            ctx.globalAlpha = alpha + 0.2;
             ctx.fillStyle = ctx.strokeStyle;
             ctx.beginPath();
-            ctx.moveTo(ax + Math.cos(angle) * 7, ay + Math.sin(angle) * 7);
-            ctx.lineTo(ax + Math.cos(angle + 2.5) * 5, ay + Math.sin(angle + 2.5) * 5);
-            ctx.lineTo(ax + Math.cos(angle - 2.5) * 5, ay + Math.sin(angle - 2.5) * 5);
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(ax - Math.cos(angle - 0.5) * 8, ay - Math.sin(angle - 0.5) * 8);
+            ctx.lineTo(ax - Math.cos(angle + 0.5) * 8, ay - Math.sin(angle + 0.5) * 8);
             ctx.closePath();
             ctx.fill();
         }
@@ -673,72 +680,71 @@ class FindingsGraph {
 
         ctx.save();
 
-        // Soft glow
         if (active) {
-            ctx.shadowColor = colors.fill;
-            ctx.shadowBlur = 25;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            ctx.shadowBlur = 10;
         }
 
-        // Bubble body
+        // Clean white/subtle flat bubbles, elegant borders
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
 
-        // Gradient fill for 3D bubble effect
-        const grad = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
-        if (active) {
-            grad.addColorStop(0, 'rgba(30, 42, 70, 0.95)');
-            grad.addColorStop(1, 'rgba(10, 18, 40, 0.95)');
+        if (node.type === 'diagnosis') {
+            ctx.fillStyle = active ? colors.bg.replace(/[\d.]+\)$/, '0.3)') : colors.bg;
+            ctx.fill();
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = active ? 3 : 2;
+            ctx.stroke();
         } else {
-            grad.addColorStop(0, colors.bg.replace(/[\d.]+\)$/, '0.25)'));
-            grad.addColorStop(1, colors.bg);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.strokeStyle = active ? colors.border : 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = active ? 2 : 1;
+            ctx.stroke();
+            
+            // Inner color ring for visual pop
+            ctx.beginPath();
+            ctx.arc(x, y, r - 2, 0, Math.PI * 2);
+            ctx.strokeStyle = colors.bg.replace(/[\d.]+\)$/, '0.4)');
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Border
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = active ? 2.5 : (node.type === 'diagnosis' ? 2.5 : 1.5);
-        ctx.globalAlpha = active ? 1 : 0.75;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // Specular highlight (bubble shine)
-        ctx.beginPath();
-        ctx.arc(x - r * 0.22, y - r * 0.28, r * 0.22, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-        ctx.fill();
-
-        // Label
-        ctx.fillStyle = active ? '#ffffff' : colors.fill;
+        // Label Text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-
+        
         if (node.type === 'diagnosis') {
-            ctx.font = '700 12px var(--font-sans, sans-serif)';
+            ctx.fillStyle = '#0D0E12'; // dark text
+            ctx.font = '800 13px var(--font-sans, sans-serif)';
             ctx.fillText(node.shortLabel, x, y - 7);
-            ctx.font = '500 11px var(--font-mono, monospace)';
-            ctx.fillStyle = active ? '#e2e8f0' : '#475569';
+            
+            ctx.font = '700 11px var(--font-mono, monospace)';
+            ctx.fillStyle = colors.border;
             ctx.fillText(Math.round((node.contribution || 0) * 100) + '%', x, y + 10);
-        } else if (r >= 24) {
-            ctx.font = '500 10px var(--font-sans, sans-serif)';
-            const lines = this._wrapText(node.shortLabel, r * 1.5);
-            const lh = 12;
-            const sy = y - ((lines.length - 1) * lh) / 2;
-            for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], x, sy + i * lh);
         } else {
-            ctx.font = '600 9px var(--font-sans, sans-serif)';
-            ctx.fillText(node.shortLabel, x, y);
+            ctx.fillStyle = '#1E293B'; // dark slate
+            let fontSize = r >= 30 ? 10 : 9;
+            ctx.font = `600 ${fontSize}px var(--font-sans, sans-serif)`;
+            
+            // Render wrapped text perfectly centered
+            const lines = this._wrapText(node.shortLabel, r * 1.8);
+            const lh = fontSize + 3;
+            const sy = y - ((lines.length - 1) * lh) / 2;
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], x, sy + i * lh);
+            }
         }
 
-        // Contribution ring
+        // Contribution arc for evidence
         if (node.contribution > 0 && node.type !== 'diagnosis') {
-            const arcAngle = Math.min(node.contribution * Math.PI * 6, Math.PI * 2);
+            const arcAngle = Math.min(node.contribution * Math.PI * 8, Math.PI * 2);
             ctx.beginPath();
-            ctx.arc(x, y, r + 5, -Math.PI / 2, -Math.PI / 2 + arcAngle);
-            ctx.strokeStyle = node.supports === false ? '#ff5274' : colors.fill;
-            ctx.lineWidth = 2.5;
-            ctx.globalAlpha = 0.5;
+            ctx.arc(x, y, r + 4, -Math.PI / 2, -Math.PI / 2 + arcAngle);
+            ctx.strokeStyle = node.supports === false ? '#F43F5E' : colors.fill;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
             ctx.stroke();
         }
 
@@ -748,16 +754,31 @@ class FindingsGraph {
     // ── Text helpers ──────────────────────────────────────────────
 
     _wrapText(text, maxW) {
+        // Clean up text format slightly
+        if (!text) return [""];
+        text = text.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+        
         const words = text.split(' ');
         const lines = [];
         let current = '';
         for (const w of words) {
+            if (!w) continue;
             const test = current ? current + ' ' + w : w;
-            if (test.length * 5 > maxW && current) { lines.push(current); current = w; }
-            else current = test;
+            // More accurate estimate without measuring API
+            if (test.length * 6 > maxW && current) { 
+                lines.push(current); 
+                current = w; 
+            } else {
+                current = test;
+            }
         }
         if (current) lines.push(current);
-        return lines.slice(0, 3);
+        
+        // Prevent massive label overflow
+        if (lines.length > 3) {
+            return [lines[0], lines[1], lines[2] + "…"];
+        }
+        return lines;
     }
 
     _truncate(text, max) {

@@ -1,0 +1,246 @@
+/* ── ProgressOverlay ── */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 14, 18, 0.65);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1.5rem;
+}
+
+.card {
+    background: #fff;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 460px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color);
+}
+
+/* Header */
+.header {
+    padding: 1.75rem 1.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pulsingDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #CAFF00;
+    flex-shrink: 0;
+    animation: pulse 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(202, 255, 0, 0.6);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(202, 255, 0, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(202, 255, 0, 0);
+    }
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin-bottom: 2px;
+}
+
+.subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.timer {
+    margin-left: auto;
+    font-size: 1.5rem;
+    font-weight: 900;
+    font-family: var(--font-mono);
+    letter-spacing: -0.03em;
+    color: var(--text-tertiary);
+}
+
+/* Stages */
+.stages {
+    padding: 1.25rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    min-height: 40px;
+}
+
+.stageLeft {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 28px;
+}
+
+.stageIcon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    transition: all 0.3s;
+}
+
+.stageConnector {
+    flex: 1;
+    width: 2px;
+    background: var(--border-color);
+    min-height: 10px;
+    margin: 3px 0;
+}
+
+.stage:last-child .stageConnector {
+    display: none;
+}
+
+/* Done */
+.done .stageIcon {
+    background: #0D0E12;
+    color: #CAFF00;
+    border: 2px solid #0D0E12;
+}
+
+.done .stageName {
+    color: var(--text-tertiary);
+    text-decoration: line-through;
+    text-decoration-color: rgba(0, 0, 0, 0.2);
+}
+
+.done .stageConnector {
+    background: #0D0E12;
+}
+
+/* Active */
+.active .stageIcon {
+    background: #0D0E12;
+    border: 2px solid #0D0E12;
+}
+
+.active .stageName {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Waiting */
+.waiting .stageIcon {
+    background: var(--bg-subtle);
+    border: 1.5px solid var(--border-color);
+}
+
+.waiting .stageName {
+    color: var(--text-tertiary);
+}
+
+.stageNum {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+}
+
+.activeSpinner {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border: 2.5px solid rgba(202, 255, 0, 0.3);
+    border-top-color: #CAFF00;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.stageBody {
+    padding-top: 4px;
+    padding-bottom: 10px;
+    flex: 1;
+}
+
+.stageName {
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.stageDesc {
+    font-size: 0.775rem;
+    color: var(--text-tertiary);
+    margin-top: 3px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Footer */
+.footer {
+    padding: 1.25rem 1.75rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progressBar {
+    flex: 1;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: #0D0E12;
+    border-radius: var(--radius-full);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progressText {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}

@@ -101,8 +101,10 @@ export default function ResultsDashboard({ data, diseaseInput, onBack }: Results
 
       {/* Findings Graph */}
       <div className={`${styles.panel} ${styles.graphSection}`}>
-        <h3 className={styles.panelTitle}>Findings Relationship Graph</h3>
-        <p className={styles.graphSubtitle}>Drag nodes · hover for details · observations and concepts linked to diagnosis</p>
+        <div className={styles.graphHeader}>
+          <h3 className={styles.panelTitle} style={{ marginBottom: 0 }}>Findings Relationship Graph</h3>
+          <p className={styles.graphSubtitle}>Drag nodes · hover for details · observations and concepts linked to diagnosis</p>
+        </div>
         <canvas id="findings-canvas" ref={findingsCanvasRef} width={800} height={420} className={styles.graphCanvas}></canvas>
       </div>
 

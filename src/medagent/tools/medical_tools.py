@@ -81,3 +81,67 @@ def segment_optic_cup(image_path: str, save_dir: str, save_name: str) -> str:
     Image.fromarray(mask).save(output_path)
     logger.info("Optic cup mask saved → %s", output_path)
     return output_path
+def segment_microaneurysms(image_path: str, save_dir: str, save_name: str) -> str:
+    """Segment microaneurysms from a fundus image (placeholder)."""
+    logger.info("Segmenting microaneurysms (placeholder)  input=%s", image_path)
+    os.makedirs(save_dir, exist_ok=True)
+    output_path = os.path.join(save_dir, save_name)
+    try:
+        w, h = Image.open(image_path).size
+    except Exception:
+        w, h = 512, 512
+    mask = np.zeros((h, w), dtype=np.uint8)
+    Image.fromarray(mask).save(output_path)
+    return output_path
+
+def segment_hemorrhages(image_path: str, save_dir: str, save_name: str) -> str:
+    """Segment hemorrhages from a fundus image (placeholder)."""
+    logger.info("Segmenting hemorrhages (placeholder)  input=%s", image_path)
+    os.makedirs(save_dir, exist_ok=True)
+    output_path = os.path.join(save_dir, save_name)
+    try:
+        w, h = Image.open(image_path).size
+    except Exception:
+        w, h = 512, 512
+    mask = np.zeros((h, w), dtype=np.uint8)
+    Image.fromarray(mask).save(output_path)
+    return output_path
+
+def segment_hard_exudates(image_path: str, save_dir: str, save_name: str) -> str:
+    """Segment hard exudates from a fundus image (placeholder)."""
+    logger.info("Segmenting hard exudates (placeholder)  input=%s", image_path)
+    os.makedirs(save_dir, exist_ok=True)
+    output_path = os.path.join(save_dir, save_name)
+    try:
+        w, h = Image.open(image_path).size
+    except Exception:
+        w, h = 512, 512
+    mask = np.zeros((h, w), dtype=np.uint8)
+    Image.fromarray(mask).save(output_path)
+    return output_path
+
+def segment_cotton_wool_spots(image_path: str, save_dir: str, save_name: str) -> str:
+    """Segment cotton wool spots from a fundus image (placeholder)."""
+    logger.info("Segmenting cotton wool spots (placeholder)  input=%s", image_path)
+    os.makedirs(save_dir, exist_ok=True)
+    output_path = os.path.join(save_dir, save_name)
+    try:
+        w, h = Image.open(image_path).size
+    except Exception:
+        w, h = 512, 512
+    mask = np.zeros((h, w), dtype=np.uint8)
+    Image.fromarray(mask).save(output_path)
+    return output_path
+
+def segment_neovascularization(image_path: str, save_dir: str, save_name: str) -> str:
+    """Segment neovascularization from a fundus image (placeholder)."""
+    logger.info("Segmenting neovascularization (placeholder)  input=%s", image_path)
+    os.makedirs(save_dir, exist_ok=True)
+    output_path = os.path.join(save_dir, save_name)
+    try:
+        w, h = Image.open(image_path).size
+    except Exception:
+        w, h = 512, 512
+    mask = np.zeros((h, w), dtype=np.uint8)
+    Image.fromarray(mask).save(output_path)
+    return output_path

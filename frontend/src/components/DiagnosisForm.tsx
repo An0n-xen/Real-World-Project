@@ -4,12 +4,13 @@ import { useState, useEffect, DragEvent, ChangeEvent, FormEvent, useRef } from "
 import styles from "./DiagnosisForm.module.css";
 
 interface DiagnosisFormProps {
-  onSubmitStart: () => void;
+  onSubmitStart: (disease: string) => void;
+  onProgress: (node: string) => void;
   onSubmitSuccess: (data: any, disease: string) => void;
   onSubmitError: (err: string) => void;
 }
 
-export default function DiagnosisForm({ onSubmitStart, onSubmitSuccess, onSubmitError }: DiagnosisFormProps) {
+export default function DiagnosisForm({ onSubmitStart, onProgress, onSubmitSuccess, onSubmitError }: DiagnosisFormProps) {
   const [diseases, setDiseases] = useState<any[]>([]);
   const [diseaseInput, setDiseaseInput] = useState("");
   const [contextInput, setContextInput] = useState("");
@@ -55,7 +56,7 @@ export default function DiagnosisForm({ onSubmitStart, onSubmitSuccess, onSubmit
     e.preventDefault();
     if (isSubmitting || !diseaseInput.trim()) return;
     setIsSubmitting(true);
-    onSubmitStart();
+    onSubmitStart(diseaseInput);
 
     const formData = new FormData();
     formData.append("disease", diseaseInput);
@@ -64,9 +65,50 @@ export default function DiagnosisForm({ onSubmitStart, onSubmitSuccess, onSubmit
 
     try {
       const res = await fetch("/api/diagnose", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) onSubmitError(data.error || "Unknown error");
-      else onSubmitSuccess(data, diseaseInput);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text.slice(0, 200) || `Server error ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (!line) continue; // Ignore empty lines (heartbeats)
+
+          try {
+            const msg = JSON.parse(line);
+            if (msg.type === "progress") {
+              onProgress(msg.node);
+            } else if (msg.type === "result") {
+              onSubmitSuccess(msg.data, diseaseInput);
+              return;
+            } else if (msg.type === "error") {
+              throw new Error(msg.error);
+            }
+          } catch (e: any) {
+            console.error("Stream parse error:", e, "Line:", line);
+            // Ignore parse errors on individual lines
+          }
+        }
+      }
+      
+      // If we exit the loop without a result msg, something dropped
+      onSubmitError("Connection closed before receiving results");
+      
     } catch (err: any) {
       onSubmitError(err.message || "Network error");
     } finally {

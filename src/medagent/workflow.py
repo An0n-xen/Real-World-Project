@@ -25,7 +25,15 @@ from medagent.schemas import (
     TaskConfig,
     ToolDefinition,
 )
-from medagent.tools.medical_tools import segment_optic_cup, segment_optic_disc
+from medagent.tools.medical_tools import (
+    segment_optic_cup,
+    segment_optic_disc,
+    segment_microaneurysms,
+    segment_hemorrhages,
+    segment_hard_exudates,
+    segment_cotton_wool_spots,
+    segment_neovascularization
+)
 from medagent.tools.registry import ToolRegistry
 from medagent.tracer import PipelineTracer
 from medagent.knowledge.concept_linker import ConceptLinker
@@ -92,6 +100,7 @@ class GraphState(TypedDict, total=False):
 
     # observability
     _tracer: Any  # PipelineTracer (Any to avoid TypedDict issues)
+    _progress_cb: Any # Callable[[str], None] | None
 
     # output
     diagnosis: dict
@@ -180,6 +189,11 @@ def _get_registry() -> ToolRegistry:
         # Register built-in tools
         _registry.register("segment_optic_cup", segment_optic_cup)
         _registry.register("segment_optic_disc", segment_optic_disc)
+        _registry.register("segment_microaneurysms", segment_microaneurysms)
+        _registry.register("segment_hemorrhages", segment_hemorrhages)
+        _registry.register("segment_hard_exudates", segment_hard_exudates)
+        _registry.register("segment_cotton_wool_spots", segment_cotton_wool_spots)
+        _registry.register("segment_neovascularization", segment_neovascularization)
     return _registry
 
 
@@ -732,9 +746,16 @@ def _traced(node_fn: Callable, node_name: str) -> Callable:
 
     def wrapper(state: GraphState) -> GraphState:
         tracer: PipelineTracer | None = state.get("_tracer")
+        cb = state.get("_progress_cb")
+        if cb:
+            try:
+                cb(node_name)
+            except Exception:
+                pass
+
         inputs = {
             k: v for k, v in state.items()
-            if k not in ("_tracer",) and isinstance(v, (str, int, float, bool))
+            if k not in ("_tracer", "_progress_cb") and isinstance(v, (str, int, float, bool))
         }
         if tracer:
             tracer.start_node(node_name, inputs=inputs)
@@ -743,7 +764,7 @@ def _traced(node_fn: Callable, node_name: str) -> Callable:
             if tracer:
                 outputs = {
                     k: v for k, v in result.items()
-                    if k not in ("_tracer",) and isinstance(v, (str, int, float, bool))
+                    if k not in ("_tracer", "_progress_cb") and isinstance(v, (str, int, float, bool))
                 }
                 tracer.end_node(node_name, outputs=outputs)
             return result
@@ -794,6 +815,7 @@ def run_diagnosis(
     image_path: str = "",
     disease_name: str = "",
     patient_context: str = "",
+    progress_cb: Callable[[str], None] | None = None,
 ) -> dict:
     """Run the full MedAgent-Pro diagnostic pipeline.
 
@@ -833,6 +855,7 @@ def run_diagnosis(
         "image_path": image_path,
         "patient_context": patient_context,
         "_tracer": tracer,
+        "_progress_cb": progress_cb,
     }
 
     result = workflow.invoke(initial_state)

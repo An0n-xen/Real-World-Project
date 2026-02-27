@@ -76,21 +76,29 @@ def _load_result_bundle(record_dir: str | Path) -> dict[str, Any]:
 @app.get("/api/diseases")
 async def list_diseases() -> JSONResponse:
     """Return every disease directory that already has a task.json."""
+    from medagent.workflow import _normalize_disease_name
+
     settings = get_settings()
     diseases_dir = Path(settings.diseases_dir)
     diseases: list[dict] = []
+    seen: set[str] = set()
 
     if diseases_dir.is_dir():
         for child in sorted(diseases_dir.iterdir()):
             if child.is_dir() and (child / "task.json").exists():
                 task = _read_json(child / "task.json") or {}
-                diseases.append(
-                    {
-                        "name": child.name,
-                        "disease": task.get("disease", child.name),
-                        "input": task.get("input", ""),
-                    }
-                )
+                raw_disease = task.get("disease", child.name)
+                norm_disease = _normalize_disease_name(raw_disease)
+                
+                if norm_disease not in seen:
+                    seen.add(norm_disease)
+                    diseases.append(
+                        {
+                            "name": child.name,
+                            "disease": norm_disease,
+                            "input": task.get("input", ""),
+                        }
+                    )
 
     return JSONResponse(diseases)
 
@@ -138,17 +146,22 @@ async def get_result(disease: str, record: str) -> JSONResponse:
     return JSONResponse(bundle)
 
 
+from fastapi.responses import StreamingResponse
+
 @app.post("/api/diagnose")
 async def run_diagnose(
     disease: str = Form(...),
     patient_context: str = Form(""),
     image: UploadFile | None = File(None),
-) -> JSONResponse:
-    """Run the full diagnostic pipeline and return results + trace."""
-    from medagent.workflow import run_diagnosis
+) -> StreamingResponse:
+    """Run the diagnostic pipeline and stream real-time progress + results."""
+    from medagent.workflow import run_diagnosis, _normalize_disease_name
 
     settings = get_settings()
-    dir_name = disease.lower().replace(" ", "_").replace("-", "_")
+    
+    # Normalize "Diagnose potential glaucoma" -> "Glaucoma"
+    disease_norm = _normalize_disease_name(disease)
+    dir_name = disease_norm.lower().replace(" ", "_").replace("-", "_")
     disease_dir = os.path.join(settings.diseases_dir, dir_name)
 
     # Handle uploaded image
@@ -160,26 +173,54 @@ async def run_diagnose(
         content = await image.read()
         Path(image_path).write_bytes(content)
 
-    # Run pipeline in a thread to avoid blocking the event loop
-    try:
-        result = await asyncio.to_thread(
-            run_diagnosis,
-            disease_dir,
-            image_path,
-            disease_name=disease,
-            patient_context=patient_context,
+    async def _stream():
+        q = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def _progress(node_name: str):
+            # Enqueue the progress event thread-safely
+            msg = json.dumps({"type": "progress", "node": node_name}) + "\n"
+            loop.call_soon_threadsafe(q.put_nowait, msg)
+
+        # Start the pipeline thread
+        task = asyncio.create_task(
+            asyncio.to_thread(
+                run_diagnosis,
+                disease_dir,
+                image_path,
+                disease_name=disease,
+                patient_context=patient_context,
+                progress_cb=_progress,
+            )
         )
-    except Exception as exc:
-        logger.exception("Diagnosis pipeline failed")
-        return JSONResponse({"error": str(exc)}, status_code=500)
 
-    # Build the response bundle from saved files
-    save_dir = result.get("save_dir", "")
-    bundle: dict[str, Any] = {"diagnosis": result.get("diagnosis")}
-    if save_dir:
-        bundle.update(_load_result_bundle(save_dir))
+        # Yield events as they arrive, with a heartbeat to prevent proxy timeouts
+        while not task.done():
+            try:
+                # Wait up to 5 seconds for a new event
+                msg = await asyncio.wait_for(q.get(), timeout=5.0)
+                yield msg
+            except asyncio.TimeoutError:
+                # Keep-alive heartbeat (empty line) so Next.js doesn't close the stream
+                yield "\n"
 
-    return JSONResponse(bundle)
+        # Flush any remaining events
+        while not q.empty():
+            yield q.get_nowait()
+
+        # Send final result or error
+        try:
+            result = task.result()
+            save_dir = result.get("save_dir", "")
+            bundle: dict[str, Any] = {"diagnosis": result.get("diagnosis")}
+            if save_dir:
+                bundle.update(_load_result_bundle(save_dir))
+            yield json.dumps({"type": "result", "data": bundle}) + "\n"
+        except Exception as exc:
+            logger.exception("Diagnosis pipeline failed")
+            yield json.dumps({"type": "error", "error": str(exc)}) + "\n"
+
+    return StreamingResponse(_stream(), media_type="application/x-ndjson")
 
 
 # ── Static files & SPA fallback ──────────────────────────────────
