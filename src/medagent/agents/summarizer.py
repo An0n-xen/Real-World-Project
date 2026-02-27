@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 from pathlib import Path
 
@@ -91,7 +92,6 @@ class SummaryAgent:
 
         data = json.loads(input_file.read_text(encoding="utf-8"))
 
-        # Flatten the data to a text representation
         if isinstance(data, dict):
             text = json.dumps(data, indent=2)
         else:
@@ -115,4 +115,83 @@ class SummaryAgent:
             encoding="utf-8",
         )
         logger.info("Brief diagnosis saved → %s [%s]", output_file, field)
+        return result
+
+    # ── Async variants ──────────────────────────────────────────────
+
+    async def asummarize(self, text: str, task_question: str = "") -> dict:
+        """Async version of :meth:`summarize` — uses ``ainvoke``."""
+        prompt = f"Summarise the following diagnostic analysis.\n\n{text}"
+        if task_question:
+            prompt += (
+                f"\n\nThe diagnostic question is: {task_question}. "
+                "Does this patient show abnormality?"
+            )
+
+        logger.info("[async] Summarising analysis (%d chars)", len(text))
+
+        response = await self._llm.ainvoke([
+            SystemMessage(content=SUMMARY_SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.warning("[async] Summary response not valid JSON, wrapping")
+            result = {
+                "summary": raw,
+                "abnormality_present": False,
+                "severity": "none",
+                "key_findings": [],
+            }
+
+        logger.info(
+            "[async] Summary: abnormal=%s  severity=%s",
+            result.get("abnormality_present"),
+            result.get("severity"),
+        )
+        return result
+
+    async def asummarize_and_save(
+        self,
+        input_file: str | Path,
+        output_file: str | Path,
+        field: str,
+        task_question: str = "",
+    ) -> dict:
+        """Async version of :meth:`summarize_and_save`."""
+        input_file = Path(input_file)
+        if not input_file.exists():
+            logger.warning("Input file not found: %s", input_file)
+            return {}
+
+        data = await asyncio.to_thread(
+            lambda: json.loads(input_file.read_text(encoding="utf-8"))
+        )
+        text = json.dumps(data, indent=2) if isinstance(data, dict) else str(data)
+        result = await self.asummarize(text, task_question)
+
+        output_file = Path(output_file)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        existing: dict = {}
+        if output_file.exists():
+            try:
+                existing = json.loads(output_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        existing[field] = result
+        await asyncio.to_thread(
+            output_file.write_text,
+            json.dumps(existing, indent=2, ensure_ascii=False),
+            "utf-8",
+        )
+        logger.info("[async] Brief diagnosis saved → %s [%s]", output_file, field)
         return result

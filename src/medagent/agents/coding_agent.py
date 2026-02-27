@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import importlib.util
 import re
 import textwrap
@@ -148,3 +149,61 @@ class CodingAgent:
             logger.exception("Error loading generated module %s", code_path)
             return None
         return module
+
+    # ── Async variant ───────────────────────────────────────────────
+
+    async def agenerate_function(
+        self,
+        step: PlanStep,
+        plan_by_id: dict[int, PlanStep],
+        tool_by_id: dict[int, ToolDefinition],
+        task_input_desc: str,
+        output_file: Path | str,
+    ) -> str:
+        """Async version of :meth:`generate_function` — uses ``ainvoke``."""
+        fn_name = f"{_snake(step.action or step.output_type)}_{step.id}"
+
+        dep_descs = []
+        for dep_id in step.input_type:
+            if dep_id == 0:
+                dep_descs.append(f"raw input ({task_input_desc})")
+            else:
+                prev = plan_by_id.get(dep_id)
+                if prev:
+                    dep_descs.append(f"output of step {dep_id} ({prev.action})")
+
+        requirement = (
+            f"Implement a Python function: {fn_name}(inputs, save_dir, save_name)\n\n"
+            f"Conceptual inputs: {', '.join(dep_descs) or 'raw image'}\n"
+            f"Expected output: {step.output_type}\n"
+            f"Action description: {step.action}\n\n"
+            "Constraints:\n"
+            "- Self-contained; add imports inside.\n"
+            "- Use os.path.join(save_dir, save_name) for output path.\n"
+            "- For JSON outputs, read existing, update key 'step_{id}', write back.\n"
+            "- Handle inputs as file paths or numpy arrays gracefully."
+        )
+
+        logger.info("[async] Generating code for step %d → %s", step.id, fn_name)
+
+        response = await self._llm.ainvoke([
+            SystemMessage(content=CODING_SYSTEM_PROMPT),
+            HumanMessage(content=requirement),
+        ])
+
+        code = response.content.strip()
+        if code.startswith("```"):
+            code = code.split("\n", 1)[1]
+            code = code.rsplit("```", 1)[0]
+
+        output_file = Path(output_file)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        def _append() -> None:
+            with open(output_file, "a", encoding="utf-8") as f:
+                f.write(f"\n\n# --- Step {step.id}: {step.action} ---\n")
+                f.write(code.rstrip() + "\n")
+
+        await asyncio.to_thread(_append)
+        logger.info("[async] Code written to %s", output_file)
+        return fn_name

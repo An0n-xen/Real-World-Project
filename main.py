@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from medagent.config import get_settings
+from medagent.config import configure_langsmith, get_settings
 from medagent.logger import get_logger
 
 logger = get_logger("medagent.cli")
@@ -140,6 +140,9 @@ def cmd_diagnose(args: argparse.Namespace) -> None:
 
 def main() -> None:
     """Entry point."""
+    # Configure LangSmith before any LangChain component initialises
+    configure_langsmith()
+
     parser = argparse.ArgumentParser(
         prog="medagent-pro",
         description="MedAgent-Pro: Evidence-based multi-modal medical diagnosis",

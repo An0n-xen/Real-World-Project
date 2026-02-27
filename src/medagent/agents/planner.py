@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 from pathlib import Path
 
@@ -138,3 +139,57 @@ class PlannerAgent:
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         logger.info("Plan saved → %s", path)
         return path
+
+    # ── Async variant ───────────────────────────────────────────────
+
+    async def aplan(
+        self,
+        task: TaskConfig,
+        toolset: list[ToolDefinition],
+        rag_context: str = "",
+        patient_context: str = "",
+    ) -> list[PlanStep]:
+        """Async version of :meth:`plan` — uses ``ainvoke``."""
+        toolset_json = json.dumps([t.model_dump() for t in toolset], indent=2)
+
+        user_prompt = (
+            "Plan a step-by-step, executable diagnostic workflow.\n\n"
+            f"**Patient input:** {task.input}\n"
+            f"**Diagnostic goal:** {task.disease}\n\n"
+        )
+        if patient_context:
+            user_prompt += (
+                "**Patient context (history, symptoms, labs):**\n"
+                f"{patient_context}\n\n"
+            )
+        if rag_context:
+            user_prompt += (
+                "**Relevant clinical guidelines (from RAG):**\n"
+                f"{rag_context}\n\n"
+            )
+        user_prompt += (
+            f"**Available toolset:**\n```json\n{toolset_json}\n```\n\n"
+            "Produce a JSON array of step objects. Return ONLY the JSON."
+        )
+
+        logger.info("[async] Generating diagnostic plan for: %s", task.disease)
+
+        response = await self._llm.ainvoke([
+            SystemMessage(content=PLANNER_SYSTEM_PROMPT),
+            HumanMessage(content=user_prompt),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        try:
+            steps_data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            logger.error("[async] Failed to parse plan JSON: %s\nRaw: %s", exc, raw[:500])
+            raise
+
+        steps = [PlanStep.model_validate(s) for s in steps_data]
+        logger.info("[async] Plan generated: %d steps", len(steps))
+        return steps

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -11,10 +12,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from medagent.config import get_settings
+from medagent.config import configure_langsmith, get_settings
 from medagent.logger import get_logger
 
 logger = get_logger("medagent.api")
+
+# ── Lifespan (startup) ───────────────────────────────────────────
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Configure LangSmith tracing before the app starts accepting requests."""
+    configure_langsmith()
+    yield
+
 
 # ── App setup ────────────────────────────────────────────────────
 
@@ -22,6 +33,7 @@ app = FastAPI(
     title="MedAgent-Pro",
     description="Evidence-based multi-modal medical diagnosis API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

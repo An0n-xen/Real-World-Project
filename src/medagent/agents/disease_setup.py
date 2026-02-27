@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -60,7 +61,8 @@ TASK_GEN_PROMPT = """
     You are a medical task configuration agent. Given a disease name, generate a
     JSON object with exactly two fields:
     - "input": description of the expected patient input (e.g., "Fundus image of the patient")
-    - "disease": diagnostic goal statement (e.g., "Diagnose potential glaucoma")
+    - "disease": the plain disease name only (e.g., "glaucoma", "diabetic retinopathy").
+      Do NOT prefix with "Diagnose" or "Diagnose potential".
 
     Return ONLY the JSON object, no markdown fences.
 """
@@ -71,16 +73,23 @@ class DiseaseSetupAgent:
 
     def __init__(self) -> None:
         settings = get_settings()
-        self._llm = ChatOpenAI(
+        _common = dict(
             model=settings.text_llm_model,
             api_key=settings.deepinfra_api_key,
             base_url=settings.deepinfra_base_url,
             temperature=0,
-            max_tokens=4096,
             seed=42,
         )
+        # Long-form guideline synthesis — needs more tokens but is the bottleneck
+        self._llm_synth = ChatOpenAI(**_common, max_tokens=2048)
+        # Compact JSON outputs (task.json / toolset.json) — tiny payloads
+        self._llm_json = ChatOpenAI(**_common, max_tokens=512)
+        # Backwards-compat alias
+        self._llm = self._llm_synth
         self._serpapi_key = settings.serpapi_api_key
         logger.info("DiseaseSetupAgent ready  model=%s", settings.text_llm_model)
+
+    # ── Sync helpers ────────────────────────────────────────────────
 
     def _search_guidelines(self, disease: str, patient_context: str = "", max_results: int = 8) -> str:
         """Search Google via SerpAPI for clinical guidelines and return combined snippets."""
@@ -132,7 +141,7 @@ class DiseaseSetupAgent:
             prompt += f"Patient context: {patient_context}\n\n"
         prompt += "Produce a comprehensive clinical guideline document."
 
-        response = self._llm.invoke([
+        response = self._llm_synth.invoke([
             SystemMessage(content=GUIDELINE_SYNTH_PROMPT),
             HumanMessage(content=prompt),
         ])
@@ -151,7 +160,7 @@ class DiseaseSetupAgent:
         if patient_context:
             prompt += f"\nPatient context: {patient_context}"
 
-        response = self._llm.invoke([
+        response = self._llm_json.invoke([
             SystemMessage(content=TASK_GEN_PROMPT),
             HumanMessage(content=prompt),
         ])
@@ -167,12 +176,12 @@ class DiseaseSetupAgent:
             logger.warning("Could not parse task JSON, using defaults")
             return {
                 "input": "Medical image of the patient",
-                "disease": f"Diagnose potential {disease}",
+                "disease": disease,
             }
 
     def _generate_toolset_json(self, disease: str, guidelines: str) -> list[dict]:
         """Generate toolset.json content for the disease."""
-        response = self._llm.invoke([
+        response = self._llm_json.invoke([
             SystemMessage(content=TOOLSET_GEN_PROMPT),
             HumanMessage(content=(
                 f"Disease: {disease}\n\n"
@@ -206,16 +215,10 @@ class DiseaseSetupAgent:
             ]
 
     def setup(self, disease: str, diseases_dir: str, patient_context: str = "") -> str:
-        """Auto-create a complete disease config directory.
-
-        Args:
-            disease: Human-readable disease name.
-            diseases_dir: Root diseases directory.
-            patient_context: Optional patient context for smarter config generation.
+        """Auto-create a complete disease config directory (sync version).
 
         Returns the path to the created disease directory.
         """
-        # Normalize disease name for directory
         dir_name = disease.lower().replace(" ", "_").replace("-", "_")
         disease_dir = os.path.join(diseases_dir, dir_name)
         guidelines_dir = os.path.join(disease_dir, "guidelines")
@@ -252,4 +255,158 @@ class DiseaseSetupAgent:
         os.makedirs(os.path.join(disease_dir, "tools"), exist_ok=True)
 
         logger.info("Disease setup complete for '%s'", disease)
+        return disease_dir
+
+    # ── Async variants ──────────────────────────────────────────────
+
+    async def _asearch_guidelines(
+        self, disease: str, patient_context: str = "", max_results: int = 8
+    ) -> str:
+        """Async web search — wraps blocking SerpAPI call in a thread."""
+        return await asyncio.to_thread(
+            self._search_guidelines, disease, patient_context, max_results
+        )
+
+    async def _asynthesize_guidelines(
+        self, disease: str, search_results: str, patient_context: str = ""
+    ) -> str:
+        """Async guideline synthesis using ``ainvoke``."""
+        logger.info("[async] Synthesizing clinical guidelines for: %s", disease)
+
+        prompt = (
+            f"Disease: {disease}\n\n"
+            f"Web search results:\n{search_results}\n\n"
+        )
+        if patient_context:
+            prompt += f"Patient context: {patient_context}\n\n"
+        prompt += "Produce a comprehensive clinical guideline document."
+
+        response = await self._llm_synth.ainvoke([
+            SystemMessage(content=GUIDELINE_SYNTH_PROMPT),
+            HumanMessage(content=prompt),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        logger.info("[async] Guidelines synthesized (%d chars)", len(raw))
+        return raw
+
+    async def _agenerate_task_json(self, disease: str, patient_context: str = "") -> dict:
+        """Async task.json generation using ``ainvoke``."""
+        prompt = f"Disease: {disease}"
+        if patient_context:
+            prompt += f"\nPatient context: {patient_context}"
+
+        response = await self._llm_json.ainvoke([
+            SystemMessage(content=TASK_GEN_PROMPT),
+            HumanMessage(content=prompt),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            logger.warning("[async] Could not parse task JSON, using defaults")
+            return {
+                "input": "Medical image of the patient",
+                "disease": disease,
+            }
+
+    async def _agenerate_toolset_json(self, disease: str, guidelines: str) -> list[dict]:
+        """Async toolset.json generation using ``ainvoke``."""
+        response = await self._llm_json.ainvoke([
+            SystemMessage(content=TOOLSET_GEN_PROMPT),
+            HumanMessage(content=(
+                f"Disease: {disease}\n\n"
+                f"Clinical guidelines summary:\n{guidelines[:3000]}\n\n"
+                "Generate the tools JSON array."
+            )),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            logger.warning("[async] Could not parse toolset JSON, using defaults")
+            return [
+                {
+                    "id": 1,
+                    "type": "Vision Language Model (VLM)",
+                    "function": "Make qualitative analysis",
+                    "input": "Any image, text or multi-modal input",
+                    "output": "Qualitative analysis or description of certain features",
+                },
+                {
+                    "id": 2,
+                    "type": "coding module",
+                    "function": "Write simple code for some indicator computation",
+                },
+            ]
+
+    async def asetup(
+        self, disease: str, diseases_dir: str, patient_context: str = ""
+    ) -> str:
+        """Async version of :meth:`setup`.
+
+        After the web search completes, the three LLM synthesis calls
+        (guidelines, task.json, toolset.json) run concurrently, cutting
+        setup time roughly to ``max(llm_latency_each)`` instead of their sum.
+
+        Returns the path to the created disease directory.
+        """
+        import time
+        dir_name = disease.lower().replace(" ", "_").replace("-", "_")
+        disease_dir = os.path.join(diseases_dir, dir_name)
+        guidelines_dir = os.path.join(disease_dir, "guidelines")
+        os.makedirs(guidelines_dir, exist_ok=True)
+        os.makedirs(os.path.join(disease_dir, "tools"), exist_ok=True)
+
+        logger.info("[async] Setting up disease config for '%s' → %s", disease, disease_dir)
+
+        # 1. Async web search (blocking SerpAPI in a thread)
+        t0 = time.perf_counter()
+        search_results = await self._asearch_guidelines(disease, patient_context)
+        logger.info("[async] Web search done  elapsed=%.2fs", time.perf_counter() - t0)
+
+        # 2. Fire all three LLM calls concurrently
+        logger.info("[async] Launching guideline synthesis, task, and toolset generation concurrently")
+        t1 = time.perf_counter()
+        guidelines, task_data, toolset_data = await asyncio.gather(
+            self._asynthesize_guidelines(disease, search_results, patient_context),
+            self._agenerate_task_json(disease, patient_context),
+            self._agenerate_toolset_json(disease, search_results[:3000]),
+        )
+        logger.info("[async] All LLM synthesis calls done  elapsed=%.2fs", time.perf_counter() - t1)
+
+        # 3. Write all files concurrently
+        guidelines_path = os.path.join(guidelines_dir, f"{dir_name}_guidelines.md")
+        task_path = os.path.join(disease_dir, "task.json")
+        toolset_path = os.path.join(disease_dir, "toolset.json")
+
+        await asyncio.gather(
+            asyncio.to_thread(Path(guidelines_path).write_text, guidelines, "utf-8"),
+            asyncio.to_thread(
+                Path(task_path).write_text,
+                json.dumps(task_data, indent=4, ensure_ascii=False),
+                "utf-8",
+            ),
+            asyncio.to_thread(
+                Path(toolset_path).write_text,
+                json.dumps(toolset_data, indent=4, ensure_ascii=False),
+                "utf-8",
+            ),
+        )
+        logger.info("[async] Files saved: guidelines, task.json, toolset.json")
+        logger.info("[async] Disease setup complete for '%s'", disease)
         return disease_dir

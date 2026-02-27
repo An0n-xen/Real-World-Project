@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import base64
 import json
 import os
@@ -167,4 +168,98 @@ class AnalyzerAgent:
             encoding="utf-8",
         )
         logger.info("Result saved → %s [%s]", output_file, field)
+        return result
+
+    # ── Async variants ──────────────────────────────────────────────
+
+    async def aanalyze(
+        self,
+        prompt: str,
+        image_paths: list[str] | None = None,
+        text_context: list[str] | None = None,
+    ) -> dict:
+        """Async version of :meth:`analyze` — uses ``ainvoke`` on the LLM."""
+        content: list[dict] = []
+
+        full_prompt = prompt
+        if text_context:
+            full_prompt += "\n\nAdditional context:\n" + "\n".join(text_context)
+        content.append({"type": "text", "text": full_prompt})
+
+        for img_path in image_paths or []:
+            if not os.path.exists(img_path):
+                logger.warning("Image not found: %s", img_path)
+                continue
+            b64 = await asyncio.to_thread(_encode_image, img_path)
+            media_type = _image_media_type(img_path)
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{media_type};base64,{b64}"},
+                }
+            )
+            logger.debug("Attached image: %s", img_path)
+
+        logger.info(
+            "[async] Running qualitative analysis  images=%d  prompt_len=%d",
+            len(image_paths or []),
+            len(full_prompt),
+        )
+
+        response = await self._llm.ainvoke([
+            SystemMessage(content=ANALYZER_SYSTEM_PROMPT),
+            HumanMessage(content=content),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.warning("Could not parse VLM response as JSON, wrapping as text")
+            result = {
+                "observation": raw,
+                "abnormality_detected": False,
+                "confidence": 0.0,
+                "reasoning": "Unparsed VLM response",
+            }
+
+        logger.info(
+            "[async] Analysis complete  abnormal=%s  confidence=%.2f",
+            result.get("abnormality_detected", "?"),
+            result.get("confidence", 0),
+        )
+        return result
+
+    async def aanalyze_and_save(
+        self,
+        prompt: str,
+        image_paths: list[str] | None,
+        output_file: str | Path,
+        field: str = "analysis",
+        text_context: list[str] | None = None,
+    ) -> dict:
+        """Async version of :meth:`analyze_and_save`."""
+        result = await self.aanalyze(prompt, image_paths, text_context)
+
+        output_file = Path(output_file)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        existing: dict = {}
+        if output_file.exists():
+            try:
+                existing = json.loads(output_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        existing[field] = result
+        await asyncio.to_thread(
+            output_file.write_text,
+            json.dumps(existing, indent=2, ensure_ascii=False),
+            "utf-8",
+        )
+        logger.info("[async] Result saved → %s [%s]", output_file, field)
         return result

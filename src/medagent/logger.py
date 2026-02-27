@@ -6,9 +6,12 @@ _CONFIGURED: set[str] = set()
 
 LOG_FORMAT = (
     "%(log_color)s%(levelname)-8s%(reset)s "
+    "%(cyan)s%(asctime)s%(reset)s "
     "%(blue)s[%(name)s]%(reset)s "
     "%(message)s"
 )
+
+DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 LOG_COLORS = {
     "DEBUG": "cyan",
@@ -36,6 +39,7 @@ def get_logger(name: str, level: int | str = logging.INFO) -> logging.Logger:
     handler.setFormatter(
         colorlog.ColoredFormatter(
             LOG_FORMAT,
+            datefmt=DATEFMT,
             log_colors=LOG_COLORS,
             reset=True,
             style="%",

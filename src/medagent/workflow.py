@@ -1,7 +1,9 @@
 from __future__ import annotations
+import asyncio
 import json
 import os
 import re
+import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, TypedDict
@@ -29,6 +31,34 @@ from medagent.tracer import PipelineTracer
 from medagent.knowledge.concept_linker import ConceptLinker
 
 logger = get_logger(__name__)
+
+
+# ── Disease name normalizer ───────────────────────────────────────
+
+_DISEASE_PREFIX_RE = re.compile(
+    r"^(?:"
+    r"diagnos(?:e|ed|ing|is of|tic for)|detect(?:ion of)?|assess(?:ment of)?|"
+    r"identify(?:ing)?|screen(?:ing for)?|evaluat(?:e|ion of)|check for|"
+    r"potential|possible|suspected?|rule out"
+    r")\s+",
+    re.IGNORECASE,
+)
+
+
+def _normalize_disease_name(name: str) -> str:
+    """Strip task-description prefixes from a disease string.
+
+    Converts 'Diagnose potential glaucoma' → 'glaucoma'.
+    Multiple passes are applied to catch chained prefixes like
+    'Diagnose potential diabetic retinopathy'.
+    """
+    prev = None
+    s = name.strip()
+    while s != prev:
+        prev = s
+        s = _DISEASE_PREFIX_RE.sub("", s).strip()
+    # Title-case the first letter, lowercase the rest
+    return s[:1].upper() + s[1:].lower() if s else name
 
 
 # ── LangGraph state (typed dict for compatibility) ────────────────
@@ -183,16 +213,29 @@ def load_config(state: GraphState) -> GraphState:
 
     # Auto-setup if configs don't exist
     if not os.path.exists(task_path) or not os.path.exists(toolset_path):
-        logger.info("Disease config not found — running auto-setup for '%s'", disease_name)
+        logger.info("Disease config not found — running async auto-setup for '%s'", disease_name)
         settings = get_settings()
         setup_agent = _get_setup_agent()
         context = state.get("patient_context", "")
-        disease_dir = setup_agent.setup(disease_name, settings.diseases_dir, patient_context=context)
+        t0 = time.perf_counter()
+        # asetup() runs web search first, then fires all 3 LLM calls concurrently
+        disease_dir = asyncio.run(
+            setup_agent.asetup(disease_name, settings.diseases_dir, patient_context=context)
+        )
+        logger.info("Auto-setup complete  elapsed=%.1fs", time.perf_counter() - t0)
         task_path = os.path.join(disease_dir, "task.json")
         toolset_path = os.path.join(disease_dir, "toolset.json")
 
     with open(task_path, "r", encoding="utf-8") as f:
         task_data = json.load(f)
+
+    # Normalise the disease name so it's always the bare name (e.g. 'Glaucoma'
+    # not 'Diagnose potential glaucoma') everywhere downstream
+    raw_disease = task_data.get("disease", disease_name)
+    clean_disease = _normalize_disease_name(raw_disease)
+    if clean_disease != raw_disease:
+        logger.info("Disease name normalised: '%s' → '%s'", raw_disease, clean_disease)
+    task_data["disease"] = clean_disease
 
     with open(toolset_path, "r", encoding="utf-8") as f:
         toolset_data = json.load(f)
@@ -331,167 +374,284 @@ def generate_tools(state: GraphState) -> GraphState:
     }
 
 
+async def _run_qualitative_step(
+    step: "PlanStep",
+    plan_by_id: dict,
+    save_dir: str,
+    image_path: str,
+    patient_context: str,
+    brief_path: str,
+) -> tuple[str, str, dict, dict]:
+    """Run a single qualitative step (VLM analysis + summary) asynchronously.
+
+    Returns ``(step_key, status, result, summary)``.
+    """
+    from medagent.agents.analyzer import AnalyzerAgent
+    from medagent.agents.summarizer import SummaryAgent
+
+    step_key = f"step_{step.id}"
+    output_path = os.path.join(save_dir, step.output_path)
+
+    # Check cache
+    cached_diagnosis: dict = {}
+    cached_brief: dict = {}
+    if os.path.exists(output_path):
+        try:
+            cached_diagnosis = json.loads(Path(output_path).read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    if os.path.exists(brief_path):
+        try:
+            cached_brief = json.loads(Path(brief_path).read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if step_key in cached_diagnosis and step_key in cached_brief:
+        logger.info("Step %d using cached result — skipping VLM call", step.id)
+        return step_key, "success", cached_diagnosis.get(step_key, {}), cached_brief.get(step_key, {})
+
+    # Resolve inputs
+    image_inputs: list[str] = []
+    text_inputs: list[str] = []
+    for dep_id in step.input_type:
+        if dep_id == 0:
+            image_inputs.append(image_path)
+        else:
+            prev_step = plan_by_id.get(dep_id)
+            if prev_step:
+                prev_path = os.path.join(save_dir, prev_step.output_path)
+                if os.path.exists(prev_path):
+                    ext = Path(prev_path).suffix.lower()
+                    if ext in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".webp"}:
+                        image_inputs.append(prev_path)
+                    else:
+                        try:
+                            text_inputs.append(Path(prev_path).read_text(encoding="utf-8"))
+                        except Exception:
+                            pass
+
+    t0 = time.perf_counter()
+    try:
+        analyzer = _get_analyzer()
+        summarizer = _get_summarizer()
+
+        # Build content for async VLM call
+        import base64
+        content: list[dict] = []
+        full_prompt = step.action
+        all_text_context = ([patient_context] if patient_context else []) + text_inputs
+        if all_text_context:
+            full_prompt += "\n\nAdditional context:\n" + "\n".join(all_text_context)
+        content.append({"type": "text", "text": full_prompt})
+
+        from medagent.agents.analyzer import _encode_image, _image_media_type, ANALYZER_SYSTEM_PROMPT
+        from langchain_core.messages import SystemMessage, HumanMessage
+        for img_path in image_inputs:
+            if not os.path.exists(img_path):
+                continue
+            b64 = await asyncio.to_thread(_encode_image, img_path)
+            media_type = _image_media_type(img_path)
+            content.append({"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{b64}"}})
+
+        logger.info(
+            "Step %d: async VLM call  images=%d  prompt_len=%d",
+            step.id, len(image_inputs), len(full_prompt),
+        )
+
+        response = await analyzer._llm.ainvoke([
+            SystemMessage(content=ANALYZER_SYSTEM_PROMPT),
+            HumanMessage(content=content),
+        ])
+
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.warning("Step %d: VLM response not valid JSON, wrapping", step.id)
+            result = {"observation": raw, "abnormality_detected": False, "confidence": 0.0, "reasoning": "Unparsed"}
+
+        # Save analysis result
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        existing: dict = {}
+        if output_file.exists():
+            try:
+                existing = json.loads(output_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        existing[step_key] = result
+        await asyncio.to_thread(
+            output_file.write_text,
+            json.dumps(existing, indent=2, ensure_ascii=False),
+            "utf-8",
+        )
+
+        # Async summarize
+        from medagent.agents.summarizer import SUMMARY_SYSTEM_PROMPT
+        summary_prompt = f"Summarise the following diagnostic analysis.\n\n{json.dumps(result, indent=2)}"
+        if step.action:
+            summary_prompt += f"\n\nThe diagnostic question is: {step.action}. Does this patient show abnormality?"
+
+        sum_response = await summarizer._llm.ainvoke([
+            SystemMessage(content=SUMMARY_SYSTEM_PROMPT),
+            HumanMessage(content=summary_prompt),
+        ])
+        sum_raw = sum_response.content.strip()
+        if sum_raw.startswith("```"):
+            sum_raw = sum_raw.split("\n", 1)[1]
+            sum_raw = sum_raw.rsplit("```", 1)[0]
+        try:
+            summary = json.loads(sum_raw)
+        except json.JSONDecodeError:
+            summary = {"summary": sum_raw, "abnormality_present": False, "severity": "none", "key_findings": []}
+
+        # Concept linking
+        try:
+            linker = _get_concept_linker()
+            obs_text = json.dumps(result, default=str) if isinstance(result, dict) else str(result)
+            concepts_path = os.path.join(save_dir, "concepts.json")
+            await asyncio.to_thread(linker.extract_and_save, obs_text, concepts_path, step_key)
+        except Exception:
+            logger.debug("Concept linking skipped for step %d", step.id)
+
+        elapsed = time.perf_counter() - t0
+        logger.info(
+            "Step %d qualitative analysis complete  elapsed=%.2fs  abnormal=%s  confidence=%.2f",
+            step.id, elapsed,
+            result.get("abnormality_detected", "?"),
+            result.get("confidence", 0),
+        )
+        return step_key, "success", result, summary
+
+    except Exception:
+        elapsed = time.perf_counter() - t0
+        logger.exception("Step %d qualitative analysis failed  elapsed=%.2fs", step.id, elapsed)
+        return step_key, "error", {}, {}
+
+
 def execute_steps(state: GraphState) -> GraphState:
-    """Node 5: Execute all plan steps (quantitative + qualitative)."""
+    """Node 5: Execute all plan steps (quantitative + qualitative).
+
+    Quantitative steps run sequentially (may depend on each other's output).
+    Qualitative steps run concurrently via ``asyncio.gather`` for speed.
+    """
     plan = [PlanStep(**s) for s in state["plan"]]
     toolset = [ToolDefinition(**t) for t in state["toolset"]]
     tool_by_id = {t.id: t for t in toolset}
     plan_by_id = {s.id: s for s in plan}
 
     registry = _get_registry()
-    analyzer = _get_analyzer()
-    summarizer = _get_summarizer()
 
     save_dir = state["save_dir"]
     image_path = state.get("image_path", "")
     patient_context = state.get("patient_context", "")
     step_results = dict(state.get("step_results", {}))
     brief_diagnosis: dict = dict(state.get("brief_diagnosis", {}))
+    brief_path = os.path.join(save_dir, "brief_diagnosis.json")
 
+    # ── Quantitative steps (sequential – data dependencies) ────────
     for step in plan:
+        if step.action_type.lower() != "quantitative":
+            continue
+
         logger.info(
             "Executing step %d  type=%s  action=%s",
             step.id, step.action_type, step.action[:60],
         )
 
-        if step.action_type.lower() == "quantitative":
-            # Run quantitative tool
-            tool_ids = step.tool or []
-            for tid in tool_ids:
-                tool = tool_by_id.get(tid)
-                if tool is None:
-                    logger.warning("Tool id %d not found in toolset", tid)
-                    continue
-
-                # Determine function name
-                if "coding" in tool.type.lower():
-                    fn_name = f"{_snake(step.action or step.output_type)}_{step.id}"
-                else:
-                    fn_name = _command_to_fn_name(tool.command) if tool.command else ""
-
-                fn = registry.get(fn_name)
-                if fn is None:
-                    logger.warning("Function '%s' not registered, skipping", fn_name)
-                    continue
-
-                # Resolve dependencies
-                deps: list[str] = []
-                for dep_id in step.input_type:
-                    if dep_id == 0:
-                        deps.append(image_path)
-                    else:
-                        prev = plan_by_id.get(dep_id)
-                        if prev:
-                            deps.append(os.path.join(save_dir, prev.output_path))
-
-                try:
-                    if "coding" in tool.type.lower():
-                        fn(deps, save_dir, step.output_path)
-                    else:
-                        primary = deps[0] if deps else image_path
-                        fn(primary, save_dir, step.output_path)
-                    step_results[f"step_{step.id}"] = "success"
-                    logger.info("Step %d completed successfully", step.id)
-                except Exception:
-                    step_results[f"step_{step.id}"] = "error"
-                    logger.exception("Step %d failed", step.id)
-
-        elif step.action_type.lower() == "qualitative":
-            # Check if result is already cached from a previous run
-            step_key = f"step_{step.id}"
-            output_path = os.path.join(save_dir, step.output_path)
-            brief_path = os.path.join(save_dir, "brief_diagnosis.json")
-
-            cached_diagnosis: dict = {}
-            cached_brief: dict = {}
-            if os.path.exists(output_path):
-                try:
-                    cached_diagnosis = json.loads(
-                        Path(output_path).read_text(encoding="utf-8")
-                    )
-                except (json.JSONDecodeError, OSError):
-                    pass
-            if os.path.exists(brief_path):
-                try:
-                    cached_brief = json.loads(
-                        Path(brief_path).read_text(encoding="utf-8")
-                    )
-                except (json.JSONDecodeError, OSError):
-                    pass
-
-            if step_key in cached_diagnosis and step_key in cached_brief:
-                logger.info("Step %d using cached result — skipping VLM call", step.id)
-                brief_diagnosis = cached_brief
-                step_results[step_key] = "success"
+        tool_ids = step.tool or []
+        for tid in tool_ids:
+            tool = tool_by_id.get(tid)
+            if tool is None:
+                logger.warning("Tool id %d not found in toolset", tid)
                 continue
 
-            # Run qualitative VLM analysis
-            image_inputs: list[str] = []
-            text_inputs: list[str] = []
+            if "coding" in tool.type.lower():
+                fn_name = f"{_snake(step.action or step.output_type)}_{step.id}"
+            else:
+                fn_name = _command_to_fn_name(tool.command) if tool.command else ""
 
+            fn = registry.get(fn_name)
+            if fn is None:
+                logger.warning("Function '%s' not registered, skipping", fn_name)
+                continue
+
+            deps: list[str] = []
             for dep_id in step.input_type:
                 if dep_id == 0:
-                    image_inputs.append(image_path)
+                    deps.append(image_path)
                 else:
-                    prev_step = plan_by_id.get(dep_id)
-                    if prev_step:
-                        prev_path = os.path.join(save_dir, prev_step.output_path)
-                        if os.path.exists(prev_path):
-                            ext = Path(prev_path).suffix.lower()
-                            if ext in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".webp"}:
-                                image_inputs.append(prev_path)
-                            else:
-                                try:
-                                    text_inputs.append(
-                                        Path(prev_path).read_text(encoding="utf-8")
-                                    )
-                                except Exception:
-                                    pass
+                    prev = plan_by_id.get(dep_id)
+                    if prev:
+                        deps.append(os.path.join(save_dir, prev.output_path))
 
             try:
-                result = analyzer.analyze_and_save(
-                    prompt=step.action,
-                    image_paths=image_inputs,
-                    output_file=output_path,
-                    field=step_key,
-                    text_context=([patient_context] if patient_context else []) + text_inputs,
+                t0 = time.perf_counter()
+                if "coding" in tool.type.lower():
+                    fn(deps, save_dir, step.output_path)
+                else:
+                    primary = deps[0] if deps else image_path
+                    fn(primary, save_dir, step.output_path)
+                step_results[f"step_{step.id}"] = "success"
+                logger.info(
+                    "Step %d completed  elapsed=%.2fs",
+                    step.id, time.perf_counter() - t0,
                 )
-
-                # Summarise
-                summary = summarizer.summarize(
-                    json.dumps(result, indent=2),
-                    task_question=step.action,
-                )
-                # Save brief
-                existing_brief: dict = {}
-                if os.path.exists(brief_path):
-                    try:
-                        existing_brief = json.loads(
-                            Path(brief_path).read_text(encoding="utf-8")
-                        )
-                    except (json.JSONDecodeError, OSError):
-                        pass
-                existing_brief[step_key] = summary
-                Path(brief_path).write_text(
-                    json.dumps(existing_brief, indent=2, ensure_ascii=False),
-                    encoding="utf-8",
-                )
-                brief_diagnosis = existing_brief
-
-                step_results[step_key] = "success"
-
-                # Concept linking: extract medical concepts from VLM observation
-                try:
-                    linker = _get_concept_linker()
-                    obs_text = json.dumps(result, default=str) if isinstance(result, dict) else str(result)
-                    concepts_path = os.path.join(save_dir, "concepts.json")
-                    linker.extract_and_save(obs_text, concepts_path, field=step_key)
-                except Exception:
-                    logger.debug("Concept linking skipped for step %d", step.id)
-                logger.info("Step %d qualitative analysis complete", step.id)
             except Exception:
-                step_results[step_key] = "error"
-                logger.exception("Step %d qualitative analysis failed", step.id)
+                step_results[f"step_{step.id}"] = "error"
+                logger.exception("Step %d failed", step.id)
+
+    # ── Qualitative steps (concurrent) ────────────────────────────
+    qualitative_steps = [s for s in plan if s.action_type.lower() == "qualitative"]
+
+    if qualitative_steps:
+        logger.info(
+            "Running %d qualitative steps concurrently …", len(qualitative_steps)
+        )
+        t_qual_start = time.perf_counter()
+
+        async def _gather_qualitative() -> None:
+            tasks = [
+                _run_qualitative_step(
+                    step=s,
+                    plan_by_id=plan_by_id,
+                    save_dir=save_dir,
+                    image_path=image_path,
+                    patient_context=patient_context,
+                    brief_path=brief_path,
+                )
+                for s in qualitative_steps
+            ]
+            return await asyncio.gather(*tasks, return_exceptions=False)
+
+        step_outputs = asyncio.run(_gather_qualitative())
+
+        # Merge brief_diagnosis from all steps (write once, atomically)
+        existing_brief: dict = {}
+        if os.path.exists(brief_path):
+            try:
+                existing_brief = json.loads(Path(brief_path).read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        for step_key, status, _result, summary in step_outputs:
+            step_results[step_key] = status
+            if status == "success":
+                existing_brief[step_key] = summary
+
+        Path(brief_path).write_text(
+            json.dumps(existing_brief, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        brief_diagnosis = existing_brief
+
+        logger.info(
+            "All qualitative steps done  elapsed=%.2fs",
+            time.perf_counter() - t_qual_start,
+        )
 
     return {
         **state,
