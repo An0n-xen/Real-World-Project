@@ -1,0 +1,221 @@
+/* ── Sidebar: Dark Polymer Style ────────────────────────────── */
+
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    background-color: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 40;
+    overflow: hidden;
+}
+
+/* Logo / Brand */
+.header {
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--border-sidebar);
+}
+
+.logoGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+}
+
+.logoIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background-color: var(--accent-lime);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0D0E12;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.title {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--text-sidebar);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.tagline {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--text-sidebar-secondary);
+    font-weight: 500;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Nav */
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.navBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-sidebar-secondary);
+    transition: all 0.15s;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.navBtn:hover {
+    background-color: var(--bg-sidebar-hover);
+    color: var(--text-sidebar);
+}
+
+.navBtn.active {
+    background-color: var(--accent-lime);
+    color: #0D0E12;
+}
+
+.navBtn.active .navIcon {
+    opacity: 1;
+}
+
+.navIcon {
+    font-size: 1rem;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+.navBtn.active .navIcon {
+    opacity: 1;
+}
+
+/* History */
+.historySection {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.sectionTitle {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: var(--text-sidebar-secondary);
+    margin-bottom: 0.875rem;
+    padding: 0 0.5rem;
+}
+
+.resultsList {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.resultItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+
+.resultItem:hover {
+    background-color: var(--bg-sidebar-hover);
+    border-color: var(--border-sidebar);
+}
+
+.resultIcon {
+    font-size: 0.875rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.resultInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.diseaseName {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-sidebar);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: capitalize;
+}
+
+.recordMeta {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-sidebar-secondary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resultArrow {
+    color: var(--text-sidebar-secondary);
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.resultItem:hover .resultArrow {
+    opacity: 1;
+}
+
+.placeholderText {
+    font-size: 0.85rem;
+    color: var(--text-sidebar-secondary);
+    text-align: center;
+    padding: 2rem 0;
+    font-style: italic;
+}
+
+/* Bottom user area */
+.sidebarFooter {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-sidebar);
+}
+
+.footerStatus {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--text-sidebar-secondary);
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-lime);
+    box-shadow: 0 0 6px var(--accent-lime);
+    flex-shrink: 0;
+}

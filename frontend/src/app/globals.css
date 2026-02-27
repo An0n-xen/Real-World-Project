@@ -1,0 +1,125 @@
+:root {
+  /* Polymer-inspired: dark sidebar, pure white content, lime accent */
+
+  /* Backgrounds */
+  --bg-main: #FFFFFF;
+  --bg-sidebar: #0D0E12;
+  --bg-sidebar-hover: #1A1B20;
+  --bg-panel: #FFFFFF;
+  --bg-subtle: #F7F8FA;
+  --bg-subtle-hover: #F0F1F5;
+
+  /* Text */
+  --text-primary: #0D0E12;
+  --text-secondary: #5A5F72;
+  --text-tertiary: #9EA3B5;
+  --text-sidebar: #FFFFFF;
+  --text-sidebar-secondary: #9EA3B5;
+
+  /* Accents — Polymer's signature lime-yellow */
+  --accent-lime: #CAFF00;
+  --accent-lime-hover: #B3E000;
+  --accent-blue: #2563EB;
+  --accent-emerald: #22C55E;
+  --accent-rose: #F43F5E;
+  --accent-warning: #F59E0B;
+
+  /* Borders */
+  --border-color: #E4E6EE;
+  --border-sidebar: rgba(255, 255, 255, 0.08);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-panel: 0 0 0 1px var(--border-color);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-sans: var(--font-outfit, 'Outfit'), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-space-grotesk, 'Space Grotesk'), 'SF Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.sidebar ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Main content scrollbar */
+main::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}

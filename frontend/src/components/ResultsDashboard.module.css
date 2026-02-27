@@ -1,0 +1,448 @@
+/* ── Graph Tooltips (populated by graph.js via getElementById) ── */
+.graphTooltip {
+    position: fixed;
+    z-index: 9999;
+    background: #0D0E12;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 0.875rem 1.125rem;
+    max-width: 280px;
+    pointer-events: none;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.tooltipHeader {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #CAFF00;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-sans);
+    line-height: 1.3;
+}
+
+.tooltipBody {
+    font-size: 0.775rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+    font-family: var(--font-mono);
+}
+
+/* ── ResultsDashboard: Polymer flat white + dark accents ── */
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.backBtn {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-color);
+    transition: all 0.15s;
+}
+
+.backBtn:hover {
+    background-color: var(--text-primary);
+    color: var(--accent-lime);
+    border-color: var(--text-primary);
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-transform: capitalize;
+}
+
+.badge {
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.badge.positive {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: #15803d;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge.negative {
+    background-color: rgba(244, 63, 94, 0.12);
+    color: #be123c;
+    border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.badge.unknown {
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #475569;
+    border: 1px solid var(--border-color);
+}
+
+/* Grid */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.leftCol,
+.rightCol {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Panels */
+.panel {
+    padding: 1.75rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.panelTitle {
+    font-size: 1rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+/* Gauge */
+.gaugeContainer {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+}
+
+.gauge {
+    width: 130px;
+    height: 130px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.gaugeBg {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 10;
+    stroke-linecap: round;
+}
+
+.gaugeFill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gaugeLabel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.gaugeValue {
+    font-size: 1.875rem;
+    font-weight: 900;
+    font-family: var(--font-mono);
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.gaugeText {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.verdictText h4 {
+    font-size: 1.625rem;
+    margin-bottom: 0.5rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+}
+
+.verdictText p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Evidence */
+.evidenceList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.evidenceItem {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 0.625rem 0.875rem;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--accent-blue);
+    line-height: 1.5;
+}
+
+.weightsGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.weightTag {
+    background: var(--bg-subtle);
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.weightValue {
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    margin-left: 0.25rem;
+}
+
+/* Reasoning */
+.reasoningStep {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.25rem;
+}
+
+.reasoningStep:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.stepHeader {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.375rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    gap: 1rem;
+}
+
+.stepContrib {
+    font-size: 0.8rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--accent-emerald);
+    flex-shrink: 0;
+}
+
+.stepContrib.negative {
+    color: var(--accent-rose);
+}
+
+.stepSig {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.625rem;
+    line-height: 1.5;
+}
+
+.stepBar {
+    height: 4px;
+    background: var(--bg-subtle-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.stepBarFill {
+    height: 100%;
+    background: var(--accent-emerald);
+    border-radius: var(--radius-full);
+    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepBarFill.negative {
+    background: var(--accent-rose);
+}
+
+/* Concepts */
+.conceptCategory {
+    margin-bottom: 1.5rem;
+}
+
+.conceptCategory:last-child {
+    margin-bottom: 0;
+}
+
+.conceptCategory h4 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.categoryDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.categoryDot.condition {
+    background: #F43F5E;
+}
+
+.categoryDot.finding {
+    background: #0EA5E9;
+}
+
+.categoryDot.symptom {
+    background: #F59E0B;
+}
+
+.categoryDot.anatomy {
+    background: #8B5CF6;
+}
+
+.categoryDot.measurement {
+    background: #22C55E;
+}
+
+.conceptTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.conceptTag {
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all 0.15s;
+}
+
+.conceptTag:hover {
+    background: var(--text-primary);
+    color: var(--accent-lime);
+    border-color: var(--text-primary);
+}
+
+/* Graph */
+.graphSection {
+    text-align: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.graphSubtitle {
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    margin-bottom: 1.25rem;
+}
+
+.graphCanvas {
+    width: 100%;
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    display: block;
+}
+
+/* Stats */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.statCard {
+    background: var(--bg-subtle);
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+}
+
+.statLabel {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.statValue {
+    font-size: 2rem;
+    font-weight: 900;
+    font-family: var(--font-mono);
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-top: 2px;
+}

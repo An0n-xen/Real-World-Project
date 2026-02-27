@@ -185,8 +185,13 @@ async def run_diagnose(
 # ── Static files & SPA fallback ──────────────────────────────────
 
 if _FRONTEND_DIR.is_dir():
+    # Mount Next.js _next folder
+    _next_dir = _FRONTEND_DIR / "_next"
+    if _next_dir.is_dir():
+        app.mount("/_next", StaticFiles(directory=str(_next_dir)), name="_next")
+    
+    # Optional: also mount raw frontend dir if needed
     app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="static")
-
 
 @app.get("/")
 async def serve_frontend() -> FileResponse:
