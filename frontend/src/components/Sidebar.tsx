@@ -34,8 +34,6 @@ export default function Sidebar({ onSelectRecord }: SidebarProps) {
 
   useEffect(() => {
     fetchHistory();
-    const interval = setInterval(fetchHistory, 10000);
-    return () => clearInterval(interval);
   }, []);
 
   return (

@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     diseases_dir: str = str(_PROJECT_ROOT / "diseases")
     output_dir: str = str(_PROJECT_ROOT / "output")
 
+    # ── MongoDB ────────────────────────────────────────────────
+    mongodb_url: str = ""
+    mongodb_database: str = "medagent_pro"
+    mongodb_enabled: bool = True
+
     # ── Logging ────────────────────────────────────────────────
     log_level: str = "INFO"
 

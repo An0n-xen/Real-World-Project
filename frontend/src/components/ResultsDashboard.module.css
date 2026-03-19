@@ -1,38 +1,38 @@
-/* ── Graph Tooltips (populated by graph.js via getElementById) ── */
+/* ── Graph Tooltips ── */
 .graphTooltip {
     position: fixed;
     z-index: 9999;
-    background: #0D0E12;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 0.875rem 1.125rem;
-    max-width: 280px;
+    background: #0B1426;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    max-width: 270px;
     pointer-events: none;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 32px rgba(11, 20, 38, 0.5);
 }
 
 .tooltipHeader {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    color: #CAFF00;
-    margin-bottom: 0.5rem;
+    color: var(--accent-light, #60A5FA);
+    margin-bottom: 0.4rem;
     font-family: var(--font-sans);
     line-height: 1.3;
 }
 
 .tooltipBody {
-    font-size: 0.775rem;
-    color: rgba(255, 255, 255, 0.65);
-    line-height: 1.6;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.55;
     font-family: var(--font-mono);
 }
 
-/* ── ResultsDashboard: Polymer flat white + dark accents ── */
+/* ── ResultsDashboard ── */
 
 .dashboard {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 /* Header */
@@ -40,62 +40,65 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem 2rem;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    padding: 1.25rem 1.75rem;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
 }
 
 .backBtn {
-    font-size: 0.875rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border-color);
-    transition: all 0.15s;
+    border: 1px solid var(--border-color);
+    transition: all 0.12s;
 }
 
 .backBtn:hover {
-    background-color: var(--text-primary);
-    color: var(--accent-lime);
+    background: var(--text-primary);
+    color: #fff;
     border-color: var(--text-primary);
 }
 
 .title {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: -0.03em;
     text-transform: capitalize;
 }
 
 .badge {
-    padding: 0.4rem 1rem;
+    padding: 0.35rem 0.875rem;
     border-radius: var(--radius-full);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
 .badge.positive {
-    background-color: rgba(34, 197, 94, 0.12);
+    background-color: rgba(22, 163, 74, 0.1);
     color: #15803d;
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(22, 163, 74, 0.15);
 }
 
 .badge.negative {
-    background-color: rgba(244, 63, 94, 0.12);
+    background-color: rgba(225, 29, 72, 0.08);
     color: #be123c;
-    border: 1px solid rgba(244, 63, 94, 0.2);
+    border: 1px solid rgba(225, 29, 72, 0.15);
 }
 
 .badge.unknown {
-    background-color: rgba(148, 163, 184, 0.15);
-    color: #475569;
+    background-color: rgba(136, 150, 171, 0.1);
+    color: var(--text-secondary);
     border: 1px solid var(--border-color);
 }
 
@@ -103,76 +106,74 @@
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 .leftCol,
 .rightCol {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 @media (max-width: 1100px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+    .grid { grid-template-columns: 1fr; }
 }
 
 /* Panels */
 .panel {
-    padding: 1.75rem;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
 }
 
 .panelTitle {
-    font-size: 1rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
 }
 
 /* Gauge */
 .gaugeContainer {
     display: flex;
     align-items: center;
-    gap: 2rem;
-    padding: 1.5rem;
-    background: var(--bg-subtle);
+    gap: 1.75rem;
+    padding: 1.25rem;
+    background: var(--bg-wash);
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-dim);
+    margin-bottom: 1.25rem;
 }
 
 .gauge {
-    width: 130px;
-    height: 130px;
+    width: 120px;
+    height: 120px;
     position: relative;
     flex-shrink: 0;
 }
 
 .gaugeBg {
     fill: none;
-    stroke: var(--border-color);
-    stroke-width: 10;
+    stroke: var(--bg-subtle-hover);
+    stroke-width: 9;
     stroke-linecap: round;
 }
 
 .gaugeFill {
     fill: none;
-    stroke-width: 10;
+    stroke-width: 9;
     stroke-linecap: round;
-    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gaugeLabel {
@@ -182,87 +183,88 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
 }
 
 .gaugeValue {
-    font-size: 1.875rem;
+    font-size: 1.75rem;
     font-weight: 900;
     font-family: var(--font-mono);
     line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
+    color: var(--text-primary);
 }
 
 .gaugeText {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     font-weight: 700;
 }
 
 .verdictText h4 {
-    font-size: 1.625rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.4rem;
     font-weight: 900;
     letter-spacing: -0.03em;
 }
 
 .verdictText p {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.88rem;
+    line-height: 1.55;
 }
 
 /* Evidence */
 .evidenceList {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
+    gap: 0.375rem;
+    margin-top: 1rem;
 }
 
 .evidenceItem {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.625rem;
     align-items: flex-start;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--text-secondary);
-    padding: 0.625rem 0.875rem;
-    background: var(--bg-subtle);
-    border-radius: var(--radius-sm);
-    border-left: 3px solid var(--accent-blue);
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-wash);
+    border-radius: var(--radius-xs);
+    border-left: 2px solid var(--accent);
     line-height: 1.5;
 }
 
 .weightsGrid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
+    gap: 0.4rem;
+    margin-top: 0.875rem;
 }
 
 .weightTag {
-    background: var(--bg-subtle);
-    padding: 0.3rem 0.75rem;
+    background: var(--bg-wash);
+    padding: 0.25rem 0.625rem;
     border-radius: var(--radius-full);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-dim);
 }
 
 .weightValue {
     font-weight: 800;
     color: var(--text-primary);
     font-family: var(--font-mono);
-    margin-left: 0.25rem;
+    margin-left: 0.2rem;
 }
 
 /* Reasoning */
 .reasoningStep {
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 1.25rem;
+    padding-bottom: 1.125rem;
+    border-bottom: 1px solid var(--border-dim);
+    margin-bottom: 1.125rem;
 }
 
 .reasoningStep:last-child {
@@ -274,35 +276,33 @@
 .stepHeader {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 0.375rem;
-    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.875rem;
     font-weight: 700;
     color: var(--text-primary);
     gap: 1rem;
 }
 
 .stepContrib {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 800;
     font-family: var(--font-mono);
     color: var(--accent-emerald);
     flex-shrink: 0;
 }
 
-.stepContrib.negative {
-    color: var(--accent-rose);
-}
+.stepContrib.negative { color: var(--accent-rose); }
 
 .stepSig {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
-    margin-bottom: 0.625rem;
+    margin-bottom: 0.5rem;
     line-height: 1.5;
 }
 
 .stepBar {
-    height: 4px;
-    background: var(--bg-subtle-hover);
+    height: 3px;
+    background: var(--bg-subtle);
     border-radius: var(--radius-full);
     overflow: hidden;
 }
@@ -311,81 +311,64 @@
     height: 100%;
     background: var(--accent-emerald);
     border-radius: var(--radius-full);
-    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.stepBarFill.negative {
-    background: var(--accent-rose);
-}
+.stepBarFill.negative { background: var(--accent-rose); }
 
 /* Concepts */
 .conceptCategory {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
-.conceptCategory:last-child {
-    margin-bottom: 0;
-}
+.conceptCategory:last-child { margin-bottom: 0; }
 
 .conceptCategory h4 {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.625rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
 }
 
 .categoryDot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.categoryDot.condition {
-    background: #F43F5E;
-}
-
-.categoryDot.finding {
-    background: #0EA5E9;
-}
-
-.categoryDot.symptom {
-    background: #F59E0B;
-}
-
-.categoryDot.anatomy {
-    background: #8B5CF6;
-}
-
-.categoryDot.measurement {
-    background: #22C55E;
-}
+.categoryDot.condition  { background: #E11D48; }
+.categoryDot.finding    { background: #2563EB; }
+.categoryDot.symptom    { background: #D97706; }
+.categoryDot.anatomy    { background: #7C3AED; }
+.categoryDot.measurement { background: #16A34A; }
 
 .conceptTags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.375rem;
 }
 
 .conceptTag {
-    padding: 0.3rem 0.75rem;
+    padding: 0.25rem 0.625rem;
     border-radius: var(--radius-full);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    background: var(--bg-subtle);
+    background: var(--bg-wash);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    transition: all 0.15s;
+    border: 1px solid var(--border-dim);
+    transition: all 0.12s;
+    cursor: default;
 }
 
 .conceptTag:hover {
     background: var(--text-primary);
-    color: var(--accent-lime);
+    color: #fff;
     border-color: var(--text-primary);
 }
 
@@ -401,19 +384,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 1.75rem;
-    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-dim);
 }
 
 .graphSubtitle {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
 }
 
 .graphCanvas {
     width: 100%;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
-    background: var(--bg-subtle);
+    background: var(--bg-wash);
     display: block;
 }
 
@@ -421,23 +404,29 @@
 .statsGrid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .statCard {
-    background: var(--bg-subtle);
-    padding: 1.25rem;
+    background: var(--bg-wash);
+    padding: 1.125rem;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-dim);
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 4px;
+    gap: 3px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.statCard:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .statLabel {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
     font-weight: 700;
@@ -445,10 +434,10 @@
 }
 
 .statValue {
-    font-size: 2rem;
+    font-size: 1.875rem;
     font-weight: 900;
     font-family: var(--font-mono);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     color: var(--text-primary);
     line-height: 1;
     margin-top: 2px;

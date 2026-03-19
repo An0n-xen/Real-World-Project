@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-import { Outfit, Space_Grotesk } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
   display: "swap",
 });
@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   description: "Evidence-based multi-modal medical diagnosis powered by agentic AI workflows.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0A1628",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${spaceGrotesk.variable}`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         {children}
       </body>
     </html>

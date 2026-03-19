@@ -14,10 +14,10 @@ class PipelineGraph {
     }
 
     static STATUS_COLORS = {
-        completed: { bg: 'rgba(202, 255, 0, 0.15)', border: '#6DAE00', text: '#3A6000', glow: 'rgba(202, 255, 0, 0.3)' },
-        running:   { bg: 'rgba(37, 99, 235, 0.1)', border: '#2563EB', text: '#1D4ED8', glow: 'rgba(37, 99, 235, 0.2)' },
-        error:     { bg: 'rgba(244, 63, 94, 0.1)', border: '#F43F5E', text: '#E11D48', glow: 'rgba(244, 63, 94, 0.2)' },
-        pending:   { bg: 'rgba(0, 0, 0, 0.03)', border: '#CBD5E1', text: '#64748B', glow: 'rgba(0,0,0,0.05)' },
+        completed: { bg: 'rgba(37, 99, 235, 0.07)', border: '#2563EB', text: '#1D4ED8', glow: 'rgba(37, 99, 235, 0.15)' },
+        running:   { bg: 'rgba(37, 99, 235, 0.07)', border: '#2563EB', text: '#1D4ED8', glow: 'rgba(37, 99, 235, 0.15)' },
+        error:     { bg: 'rgba(225, 29, 72, 0.07)', border: '#E11D48', text: '#BE123C', glow: 'rgba(225, 29, 72, 0.15)' },
+        pending:   { bg: 'rgba(0, 0, 0, 0.02)', border: '#CBD5E1', text: '#64748B', glow: 'rgba(0,0,0,0.03)' },
     };
 
     static NODE_LABELS = {
@@ -41,7 +41,6 @@ class PipelineGraph {
         const traceMap = {};
         for (const n of traceData.nodes) traceMap[n.node_name] = n;
 
-        // Pre-build nodes with placeholder positions so _setupCanvas can measure height
         const padding = 20;
         const nodeW = 260;
         const nodeH = 50;
@@ -56,17 +55,15 @@ class PipelineGraph {
                 duration: trace.duration_seconds || 0,
                 inputs: trace.inputs_summary || {},
                 outputs: trace.outputs_summary || {},
-                x: 0,          // will be corrected below after canvas resize
+                x: 0,
                 y: padding + i * (nodeH + gapY),
                 w: nodeW,
                 h: nodeH,
             };
         });
 
-        // Now resize the canvas to fit the nodes BEFORE computing X
         this._setupCanvas();
 
-        // Recompute X using the actual rendered canvas width
         const cw = this.canvas.width / this.dpr;
         const startX = (cw - nodeW) / 2;
         for (const node of this.nodes) node.x = startX;
@@ -74,7 +71,6 @@ class PipelineGraph {
         this.edges = [];
         for (let i = 0; i < this.nodes.length - 1; i++) this.edges.push({ from: i, to: i + 1 });
 
-        // Draw without calling _setupCanvas again (already done)
         for (const edge of this.edges) this._drawEdge(this.nodes[edge.from], this.nodes[edge.to]);
         for (const node of this.nodes) this._drawNode(node, false);
     }
@@ -114,12 +110,12 @@ class PipelineGraph {
         grad.addColorStop(0, fc.border);
         grad.addColorStop(1, tc.border);
         ctx.strokeStyle = grad;
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.4;
         ctx.stroke();
 
-        const sz = 5;
-        ctx.globalAlpha = 0.7;
+        const sz = 4;
+        ctx.globalAlpha = 0.6;
         ctx.fillStyle = tc.border;
         ctx.beginPath();
         ctx.moveTo(x, y2);
@@ -136,40 +132,40 @@ class PipelineGraph {
         const { x, y, w, h } = node;
 
         ctx.save();
-        if (hovered) { ctx.shadowColor = colors.glow; ctx.shadowBlur = 18; }
+        if (hovered) { ctx.shadowColor = colors.glow; ctx.shadowBlur = 14; }
 
-        ctx.fillStyle = hovered ? '#0D0E12' : colors.bg;
+        ctx.fillStyle = hovered ? '#0B1426' : colors.bg;
         ctx.beginPath();
         ctx.roundRect(x, y, w, h, 8);
         ctx.fill();
 
-        ctx.strokeStyle = hovered ? '#0D0E12' : colors.border;
-        ctx.lineWidth = hovered ? 2 : 1.5;
+        ctx.strokeStyle = hovered ? 'rgba(37, 99, 235, 0.4)' : colors.border;
+        ctx.lineWidth = hovered ? 1.5 : 1;
         ctx.stroke();
         ctx.shadowBlur = 0;
 
         // Status dot
         ctx.fillStyle = colors.border;
         ctx.beginPath();
-        ctx.arc(x + 16, y + h / 2, 5, 0, Math.PI * 2);
+        ctx.arc(x + 16, y + h / 2, 4, 0, Math.PI * 2);
         ctx.fill();
 
         // Label
-        ctx.fillStyle = hovered ? '#CAFF00' : '#0D0E12';
+        ctx.fillStyle = hovered ? '#E2E8F0' : '#1A1F36';
         ctx.font = '600 13px var(--font-sans, sans-serif)';
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
         ctx.fillText(node.label, x + 30, y + h / 2 - 7);
 
         // Duration
-        ctx.fillStyle = hovered ? 'rgba(202, 255, 0, 0.7)' : '#64748B';
+        ctx.fillStyle = hovered ? 'rgba(226, 232, 240, 0.6)' : '#8792A2';
         ctx.font = '500 11px var(--font-mono, monospace)';
         const dur = node.duration >= 1 ? `${node.duration.toFixed(1)}s` : `${(node.duration * 1000).toFixed(0)}ms`;
         ctx.fillText(dur, x + 30, y + h / 2 + 9);
 
         // Status badge
-        ctx.fillStyle = hovered ? 'rgba(202, 255, 0, 0.5)' : colors.text;
-        ctx.globalAlpha = hovered ? 1 : 0.9;
+        ctx.fillStyle = hovered ? 'rgba(96, 165, 250, 0.7)' : colors.text;
+        ctx.globalAlpha = hovered ? 1 : 0.8;
         ctx.font = '700 10px var(--font-sans, sans-serif)';
         ctx.textAlign = 'right';
         ctx.fillText(node.status.toUpperCase(), x + w - 12, y + h / 2);
@@ -249,12 +245,6 @@ class PipelineGraph {
 
 /* ═══════════════════════════════════════════════════════════════════
    Findings Knowledge Graph — Force-Directed with Physics
-   ═══════════════════════════════════════════════════════════════════
-   Interactive floating-bubble graph:
-     • Force simulation (repulsion, attraction, center gravity)
-     • Collision detection (nodes push apart)
-     • Mouse drag (grab, move, release)
-     • Continuous animation loop
    ═══════════════════════════════════════════════════════════════════ */
 
 class FindingsGraph {
@@ -270,14 +260,13 @@ class FindingsGraph {
         this.running = false;
 
         // Physics tunables
-        this.REPULSION = 6000;      // stronger repulsion
-        this.ATTRACTION = 0.002;    // weaker spring force (looser)
-        this.CENTER_GRAVITY = 0.003;// very weak center pull
-        this.DAMPING = 0.88;        // existing damping
-        this.COLLISION_PAD = 15;    // more personal space
-        this.MAX_SPEED = 8;         // existing speed cap
+        this.REPULSION = 6000;
+        this.ATTRACTION = 0.002;
+        this.CENTER_GRAVITY = 0.003;
+        this.DAMPING = 0.88;
+        this.COLLISION_PAD = 15;
+        this.MAX_SPEED = 8;
 
-        // Mouse state
         this._mouseX = 0;
         this._mouseY = 0;
 
@@ -291,7 +280,6 @@ class FindingsGraph {
         this.canvas.addEventListener('mouseup', this._onMouseUp);
         this.canvas.addEventListener('mouseleave', this._onMouseLeave);
 
-        // Touch support
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const t = e.touches[0];
@@ -306,16 +294,14 @@ class FindingsGraph {
     }
 
     static CATEGORY_COLORS = {
-        diagnosis:   { fill: '#059669', border: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' },
-        evidence:    { fill: '#0284C7', border: '#0EA5E9', bg: 'rgba(14, 165, 233, 0.12)' },
-        finding:     { fill: '#0D9488', border: '#14B8A6', bg: 'rgba(20, 184, 166, 0.10)' },
-        condition:   { fill: '#E11D48', border: '#F43F5E', bg: 'rgba(244, 63, 94, 0.10)' },
-        symptom:     { fill: '#D97706', border: '#F59E0B', bg: 'rgba(245, 158, 11, 0.10)' },
-        anatomy:     { fill: '#7C3AED', border: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.10)' },
-        measurement: { fill: '#059669', border: '#10B981', bg: 'rgba(16, 185, 129, 0.10)' },
+        diagnosis:   { fill: '#059669', border: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+        evidence:    { fill: '#0284C7', border: '#0EA5E9', bg: 'rgba(14, 165, 233, 0.10)' },
+        finding:     { fill: '#2563EB', border: '#3B82F6', bg: 'rgba(37, 99, 235, 0.08)' },
+        condition:   { fill: '#E11D48', border: '#F43F5E', bg: 'rgba(244, 63, 94, 0.08)' },
+        symptom:     { fill: '#D97706', border: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)' },
+        anatomy:     { fill: '#7C3AED', border: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.08)' },
+        measurement: { fill: '#059669', border: '#10B981', bg: 'rgba(16, 185, 129, 0.08)' },
     };
-
-    // ── Data binding ──────────────────────────────────────────────
 
     setData({ diagnosis, reasoningChain, concepts }) {
         this.graphNodes = [];
@@ -328,7 +314,6 @@ class FindingsGraph {
         const cx = cw / 2;
         const cy = ch / 2;
 
-        // 1. Central diagnosis node (fixed at center)
         const diagLabel = diagnosis
             ? `${(diagnosis.diagnosis || 'Unknown').toUpperCase()} (${Math.round((diagnosis.confidence || 0) * 100)}%)`
             : 'DIAGNOSIS';
@@ -341,14 +326,13 @@ class FindingsGraph {
             x: cx, y: cy,
             vx: 0, vy: 0,
             r: 52,
-            fixed: true,   // diagnosis stays in center
+            fixed: true,
             detail: diagnosis?.notes || '',
             contribution: diagnosis?.confidence || 0,
         });
 
-        // 2. Reasoning observations (Ring 1)
         const chain = reasoningChain || [];
-        const ring1R = Math.min(cw, ch) * 0.35; // increased from 0.26
+        const ring1R = Math.min(cw, ch) * 0.35;
 
         chain.forEach((step, i) => {
             const angle = (i / chain.length) * Math.PI * 2 - Math.PI / 2;
@@ -375,11 +359,10 @@ class FindingsGraph {
                 from: nodeId, to: 'diagnosis',
                 weight: step.confidence_contribution || 0.05,
                 supports: step.supports_diagnosis !== false,
-                restLength: ring1R * 1.1, // longer rest length
+                restLength: ring1R * 1.1,
             });
         });
 
-        // 3. Medical concepts (Ring 2)
         if (concepts && typeof concepts === 'object') {
             const seen = new Set();
             const allConcepts = [];
@@ -392,7 +375,7 @@ class FindingsGraph {
             }
 
             const topConcepts = allConcepts.slice(0, 18);
-            const ring2R = Math.min(cw, ch) * 0.48; // increased from 0.42
+            const ring2R = Math.min(cw, ch) * 0.48;
 
             topConcepts.forEach((c, i) => {
                 const angle = (i / topConcepts.length) * Math.PI * 2 - Math.PI / 2;
@@ -415,7 +398,6 @@ class FindingsGraph {
                     contribution: 0,
                 });
 
-                // Link to best matching observation
                 let bestObs = null, bestScore = 0;
                 const nameLow = c.name.toLowerCase();
                 for (let j = 0; j < chain.length; j++) {
@@ -434,12 +416,11 @@ class FindingsGraph {
                     weight: 0.03,
                     supports: true,
                     secondary: true,
-                    restLength: (bestObs && bestScore >= 1) ? ring2R * 0.7 : ring2R * 1.25, // increased spacing
+                    restLength: (bestObs && bestScore >= 1) ? ring2R * 0.7 : ring2R * 1.25,
                 });
             });
         }
 
-        // 4. Cross-links between related observations
         for (let i = 0; i < chain.length; i++) {
             for (let j = i + 1; j < chain.length; j++) {
                 const wordsI = new Set((chain[i].observation || '').toLowerCase().split(/\s+/).filter(w => w.length > 4));
@@ -450,20 +431,17 @@ class FindingsGraph {
                     this.graphEdges.push({
                         from: `obs_${i}`, to: `obs_${j}`,
                         weight: 0.02, supports: true,
-                        crossLink: true, restLength: ring1R * 0.9, // looser cross links
+                        crossLink: true, restLength: ring1R * 0.9,
                     });
                 }
             }
         }
 
-        // Start animation
         if (!this.running) {
             this.running = true;
             this._tick();
         }
     }
-
-    // ── Physics loop ──────────────────────────────────────────────
 
     _tick() {
         if (!this.running) return;
@@ -482,19 +460,15 @@ class FindingsGraph {
         const cx = cw / 2;
         const cy = ch / 2;
 
-        // Reset forces
         for (const n of nodes) { n.fx = 0; n.fy = 0; }
 
-        // 1. Node-node repulsion (Coulomb)
         for (let i = 0; i < nodes.length; i++) {
             for (let j = i + 1; j < nodes.length; j++) {
                 const a = nodes[i], b = nodes[j];
                 let dx = b.x - a.x;
                 let dy = b.y - a.y;
                 let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                const minDist = a.r + b.r + this.COLLISION_PAD;
 
-                // Stronger repulsion when close
                 const force = this.REPULSION / (dist * dist);
                 const fx = (dx / dist) * force;
                 const fy = (dy / dist) * force;
@@ -504,7 +478,6 @@ class FindingsGraph {
             }
         }
 
-        // 2. Edge attraction (spring)
         for (const edge of edges) {
             const a = this._getById(edge.from);
             const b = this._getById(edge.to);
@@ -525,22 +498,19 @@ class FindingsGraph {
             b.fx -= fx; b.fy -= fy;
         }
 
-        // 3. Center gravity
         for (const n of nodes) {
             if (n.fixed) continue;
             n.fx += (cx - n.x) * this.CENTER_GRAVITY;
             n.fy += (cy - n.y) * this.CENTER_GRAVITY;
         }
 
-        // 4. Integrate velocity → position
         for (const n of nodes) {
             if (n.fixed) continue;
-            if (n === this.dragNode) continue; // dragged node follows mouse
+            if (n === this.dragNode) continue;
 
             n.vx = (n.vx + n.fx) * this.DAMPING;
             n.vy = (n.vy + n.fy) * this.DAMPING;
 
-            // Speed cap
             const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
             if (speed > this.MAX_SPEED) {
                 n.vx = (n.vx / speed) * this.MAX_SPEED;
@@ -550,12 +520,10 @@ class FindingsGraph {
             n.x += n.vx;
             n.y += n.vy;
 
-            // Boundary containment
             n.x = Math.max(n.r + 4, Math.min(cw - n.r - 4, n.x));
             n.y = Math.max(n.r + 4, Math.min(ch - n.r - 4, n.y));
         }
 
-        // 5. Hard collision resolution (overlapping bubbles push apart)
         for (let i = 0; i < nodes.length; i++) {
             for (let j = i + 1; j < nodes.length; j++) {
                 const a = nodes[i], b = nodes[j];
@@ -586,8 +554,6 @@ class FindingsGraph {
         return this.graphNodes.find(n => n.id === id);
     }
 
-    // ── Rendering ─────────────────────────────────────────────────
-
     _setupCanvas() {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width * this.dpr;
@@ -599,10 +565,7 @@ class FindingsGraph {
         this._setupCanvas();
         const ctx = this.ctx;
 
-        // Edges
         for (const edge of this.graphEdges) this._drawEdge(edge);
-
-        // Nodes
         for (const node of this.graphNodes) this._drawNode(node, node === this.hoveredNode, node === this.dragNode);
     }
 
@@ -615,20 +578,19 @@ class FindingsGraph {
         ctx.save();
 
         const isHighlighted = this.hoveredNode && (this.hoveredNode.id === edge.from || this.hoveredNode.id === edge.to);
-        const alpha = isHighlighted ? 1.0 : (edge.crossLink ? 0.35 : edge.secondary ? 0.45 : 0.7);
-        
-        // Thicker, more visible lines for light theme
-        let baseLineW = edge.secondary ? 1.5 : Math.max(2, edge.weight * 10);
-        const lineWidth = isHighlighted ? baseLineW + 1.5 : baseLineW;
+        const alpha = isHighlighted ? 0.9 : (edge.crossLink ? 0.25 : edge.secondary ? 0.35 : 0.6);
+
+        let baseLineW = edge.secondary ? 1 : Math.max(1.5, edge.weight * 8);
+        const lineWidth = isHighlighted ? baseLineW + 1 : baseLineW;
 
         ctx.globalAlpha = alpha;
         ctx.lineWidth = lineWidth;
 
         if (edge.supports === false) {
-            ctx.strokeStyle = '#F43F5E';
+            ctx.strokeStyle = '#E11D48';
         } else if (edge.crossLink) {
             ctx.strokeStyle = '#94A3B8';
-            ctx.setLineDash([4, 4]);
+            ctx.setLineDash([3, 4]);
         } else if (edge.secondary) {
             ctx.strokeStyle = '#CBD5E1';
         } else {
@@ -638,10 +600,9 @@ class FindingsGraph {
             ctx.strokeStyle = grad;
         }
 
-        // Clean straight lines for secondary, bezier for primary
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
-        
+
         if (edge.crossLink || edge.secondary) {
             ctx.lineTo(to.x, to.y);
         } else {
@@ -649,22 +610,21 @@ class FindingsGraph {
             const my = (from.y + to.y) / 2;
             const dx = to.x - from.x;
             const dy = to.y - from.y;
-            ctx.quadraticCurveTo(mx + dy * 0.05, my - dx * 0.05, to.x, to.y);
+            ctx.quadraticCurveTo(mx + dy * 0.04, my - dx * 0.04, to.x, to.y);
         }
         ctx.stroke();
 
-        // Elegant minimal arrows
         if (!edge.secondary && !edge.crossLink) {
             const angle = Math.atan2(to.y - from.y, to.x - from.x);
-            const ad = to.r + 6;
+            const ad = to.r + 5;
             const ax = to.x - Math.cos(angle) * ad;
             const ay = to.y - Math.sin(angle) * ad;
-            ctx.globalAlpha = alpha + 0.2;
+            ctx.globalAlpha = alpha + 0.15;
             ctx.fillStyle = ctx.strokeStyle;
             ctx.beginPath();
             ctx.moveTo(ax, ay);
-            ctx.lineTo(ax - Math.cos(angle - 0.5) * 8, ay - Math.sin(angle - 0.5) * 8);
-            ctx.lineTo(ax - Math.cos(angle + 0.5) * 8, ay - Math.sin(angle + 0.5) * 8);
+            ctx.lineTo(ax - Math.cos(angle - 0.45) * 7, ay - Math.sin(angle - 0.45) * 7);
+            ctx.lineTo(ax - Math.cos(angle + 0.45) * 7, ay - Math.sin(angle + 0.45) * 7);
             ctx.closePath();
             ctx.fill();
         }
@@ -681,54 +641,50 @@ class FindingsGraph {
         ctx.save();
 
         if (active) {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+            ctx.shadowBlur = 8;
         }
 
-        // Clean white/subtle flat bubbles, elegant borders
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
 
         if (node.type === 'diagnosis') {
-            ctx.fillStyle = active ? colors.bg.replace(/[\d.]+\)$/, '0.3)') : colors.bg;
+            ctx.fillStyle = active ? colors.bg.replace(/[\d.]+\)$/, '0.25)') : colors.bg;
             ctx.fill();
             ctx.strokeStyle = colors.border;
-            ctx.lineWidth = active ? 3 : 2;
+            ctx.lineWidth = active ? 2.5 : 2;
             ctx.stroke();
         } else {
             ctx.fillStyle = '#FFFFFF';
             ctx.fill();
-            ctx.strokeStyle = active ? colors.border : 'rgba(0,0,0,0.1)';
-            ctx.lineWidth = active ? 2 : 1;
+            ctx.strokeStyle = active ? colors.border : 'rgba(0,0,0,0.07)';
+            ctx.lineWidth = active ? 1.5 : 1;
             ctx.stroke();
-            
-            // Inner color ring for visual pop
+
             ctx.beginPath();
             ctx.arc(x, y, r - 2, 0, Math.PI * 2);
-            ctx.strokeStyle = colors.bg.replace(/[\d.]+\)$/, '0.4)');
+            ctx.strokeStyle = colors.bg.replace(/[\d.]+\)$/, '0.35)');
             ctx.lineWidth = 1;
             ctx.stroke();
         }
         ctx.shadowBlur = 0;
 
-        // Label Text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         if (node.type === 'diagnosis') {
-            ctx.fillStyle = '#0D0E12'; // dark text
+            ctx.fillStyle = '#1A1F36';
             ctx.font = '800 13px var(--font-sans, sans-serif)';
             ctx.fillText(node.shortLabel, x, y - 7);
-            
+
             ctx.font = '700 11px var(--font-mono, monospace)';
             ctx.fillStyle = colors.border;
             ctx.fillText(Math.round((node.contribution || 0) * 100) + '%', x, y + 10);
         } else {
-            ctx.fillStyle = '#1E293B'; // dark slate
+            ctx.fillStyle = '#1A1F36';
             let fontSize = r >= 30 ? 10 : 9;
             ctx.font = `600 ${fontSize}px var(--font-sans, sans-serif)`;
-            
-            // Render wrapped text perfectly centered
+
             const lines = this._wrapText(node.shortLabel, r * 1.8);
             const lh = fontSize + 3;
             const sy = y - ((lines.length - 1) * lh) / 2;
@@ -737,13 +693,12 @@ class FindingsGraph {
             }
         }
 
-        // Contribution arc for evidence
         if (node.contribution > 0 && node.type !== 'diagnosis') {
             const arcAngle = Math.min(node.contribution * Math.PI * 8, Math.PI * 2);
             ctx.beginPath();
             ctx.arc(x, y, r + 4, -Math.PI / 2, -Math.PI / 2 + arcAngle);
-            ctx.strokeStyle = node.supports === false ? '#F43F5E' : colors.fill;
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = node.supports === false ? '#E11D48' : colors.fill;
+            ctx.lineWidth = 2.5;
             ctx.lineCap = 'round';
             ctx.stroke();
         }
@@ -751,30 +706,25 @@ class FindingsGraph {
         ctx.restore();
     }
 
-    // ── Text helpers ──────────────────────────────────────────────
-
     _wrapText(text, maxW) {
-        // Clean up text format slightly
         if (!text) return [""];
         text = text.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-        
+
         const words = text.split(' ');
         const lines = [];
         let current = '';
         for (const w of words) {
             if (!w) continue;
             const test = current ? current + ' ' + w : w;
-            // More accurate estimate without measuring API
-            if (test.length * 6 > maxW && current) { 
-                lines.push(current); 
-                current = w; 
+            if (test.length * 6 > maxW && current) {
+                lines.push(current);
+                current = w;
             } else {
                 current = test;
             }
         }
         if (current) lines.push(current);
-        
-        // Prevent massive label overflow
+
         if (lines.length > 3) {
             return [lines[0], lines[1], lines[2] + "…"];
         }
@@ -785,15 +735,12 @@ class FindingsGraph {
         return text.length > max ? text.slice(0, max - 1) + '…' : text;
     }
 
-    // ── Interaction ───────────────────────────────────────────────
-
     _getCanvasPos(e) {
         const rect = this.canvas.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
     _getNodeAt(px, py) {
-        // Check in reverse order so top-drawn nodes have priority
         for (let i = this.graphNodes.length - 1; i >= 0; i--) {
             const n = this.graphNodes[i];
             const dx = px - n.x, dy = py - n.y;
@@ -819,14 +766,12 @@ class FindingsGraph {
         this._mouseY = pos.y;
 
         if (this.dragNode) {
-            // Move dragged node to mouse position
             this.dragNode.x = pos.x;
             this.dragNode.y = pos.y;
             this.dragNode.vx = 0;
             this.dragNode.vy = 0;
             this.canvas.style.cursor = 'grabbing';
 
-            // Hide tooltip while dragging
             const t = document.getElementById('findings-tooltip');
             if (t) t.style.display = 'none';
             return;
@@ -850,7 +795,6 @@ class FindingsGraph {
 
     _onMouseUp() {
         if (this.dragNode) {
-            // Give a small random kick so it settles naturally
             this.dragNode.vx = (Math.random() - 0.5) * 0.5;
             this.dragNode.vy = (Math.random() - 0.5) * 0.5;
             this.dragNode = null;
@@ -884,7 +828,7 @@ class FindingsGraph {
         }
         if (node.detail) {
             const det = node.detail.length > 120 ? node.detail.slice(0, 117) + '…' : node.detail;
-            html += `<div style="margin-top:6px;opacity:0.65;font-size:0.7rem;line-height:1.4;">${det}</div>`;
+            html += `<div style="margin-top:6px;opacity:0.55;font-size:0.68rem;line-height:1.4;">${det}</div>`;
         }
         if (body) body.innerHTML = html;
         tooltip.style.display = 'block';
@@ -900,15 +844,13 @@ class FindingsGraph {
         tooltip.style.top = ty + 'px';
     }
 
-    // ── Cleanup ───────────────────────────────────────────────────
-
     destroy() {
         this.running = false;
     }
 }
 
 
-/* ── Exports ──────────────────────────────────────────────────── */
+/* ── Exports ── */
 
 window.PipelineGraph = PipelineGraph;
 window.FindingsGraph = FindingsGraph;

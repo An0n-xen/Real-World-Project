@@ -125,7 +125,7 @@ export default function DiagnosisForm({ onSubmitStart, onProgress, onSubmitSucce
           <span>Diagnostic Engine</span>
         </div>
         <h1 className={styles.heroTitle}>
-          MedAgent <span style={{ color: "#CAFF00", WebkitTextStroke: "2px #0D0E12" }}>Pro</span>
+          MedAgent <span style={{ color: "var(--accent)" }}>Pro</span>
         </h1>
       </div>
 

@@ -487,21 +487,23 @@ async def _run_qualitative_step(
             logger.warning("Step %d: VLM response not valid JSON, wrapping", step.id)
             result = {"observation": raw, "abnormality_detected": False, "confidence": 0.0, "reasoning": "Unparsed"}
 
-        # Save analysis result
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        existing: dict = {}
-        if output_file.exists():
-            try:
-                existing = json.loads(output_file.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
-                pass
-        existing[step_key] = result
-        await asyncio.to_thread(
-            output_file.write_text,
-            json.dumps(existing, indent=2, ensure_ascii=False),
-            "utf-8",
-        )
+        # Save analysis result (skip file write in MongoDB mode)
+        settings = get_settings()
+        if not settings.mongodb_enabled:
+            output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            existing: dict = {}
+            if output_file.exists():
+                try:
+                    existing = json.loads(output_file.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    pass
+            existing[step_key] = result
+            await asyncio.to_thread(
+                output_file.write_text,
+                json.dumps(existing, indent=2, ensure_ascii=False),
+                "utf-8",
+            )
 
         # Async summarize
         from medagent.agents.summarizer import SUMMARY_SYSTEM_PROMPT
@@ -656,10 +658,11 @@ def execute_steps(state: GraphState) -> GraphState:
             if status == "success":
                 existing_brief[step_key] = summary
 
-        Path(brief_path).write_text(
-            json.dumps(existing_brief, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        if not get_settings().mongodb_enabled:
+            Path(brief_path).write_text(
+                json.dumps(existing_brief, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
         brief_diagnosis = existing_brief
 
         logger.info(

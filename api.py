@@ -22,9 +22,13 @@ logger = get_logger("medagent.api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Configure LangSmith tracing before the app starts accepting requests."""
+    """Configure LangSmith tracing and MongoDB before the app starts."""
+    from medagent.db.connection import init_db, close_db
+
     configure_langsmith()
+    await init_db()
     yield
+    await close_db()
 
 
 # ── App setup ────────────────────────────────────────────────────
@@ -56,18 +60,6 @@ def _read_json(path: str | Path) -> dict | list | None:
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError, FileNotFoundError):
         return None
-
-
-def _load_result_bundle(record_dir: str | Path) -> dict[str, Any]:
-    """Load all saved JSON artefacts from a record directory."""
-    d = Path(record_dir)
-    return {
-        "pipeline_trace": _read_json(d / "pipeline_trace.json"),
-        "final_diagnosis": _read_json(d / "final_diagnosis.json"),
-        "reasoning_trace": _read_json(d / "reasoning_trace.json"),
-        "concepts": _read_json(d / "concepts.json"),
-        "brief_diagnosis": _read_json(d / "brief_diagnosis.json"),
-    }
 
 
 # ── API Routes ───────────────────────────────────────────────────
@@ -106,43 +98,20 @@ async def list_diseases() -> JSONResponse:
 @app.get("/api/results")
 async def list_results() -> JSONResponse:
     """List all past diagnosis records grouped by disease."""
-    settings = get_settings()
-    output_dir = Path(settings.output_dir)
-    results: list[dict] = []
+    from medagent.db.repository import list_all_records
 
-    if output_dir.is_dir():
-        for disease_dir in sorted(output_dir.iterdir()):
-            if not disease_dir.is_dir() or disease_dir.name.startswith("."):
-                continue
-            record_root = disease_dir / "record"
-            if not record_root.is_dir():
-                continue
-            for record in sorted(record_root.iterdir()):
-                if not record.is_dir():
-                    continue
-                trace = _read_json(record / "pipeline_trace.json")
-                results.append(
-                    {
-                        "disease": disease_dir.name,
-                        "record": record.name,
-                        "has_trace": trace is not None,
-                        "start_time": (trace or {}).get("start_time", ""),
-                        "patient_context": (trace or {}).get("patient_context", ""),
-                    }
-                )
-
+    results = await list_all_records()
     return JSONResponse(results)
 
 
 @app.get("/api/results/{disease}/{record}")
 async def get_result(disease: str, record: str) -> JSONResponse:
     """Return the full result bundle for a specific record."""
-    settings = get_settings()
-    record_dir = Path(settings.output_dir) / disease / "record" / record
-    if not record_dir.is_dir():
-        return JSONResponse({"error": "Record not found"}, status_code=404)
+    from medagent.db.repository import get_record_bundle
 
-    bundle = _load_result_bundle(record_dir)
+    bundle = await get_record_bundle(disease, record)
+    if bundle is None:
+        return JSONResponse({"error": "Record not found"}, status_code=404)
     return JSONResponse(bundle)
 
 
@@ -210,11 +179,78 @@ async def run_diagnose(
 
         # Send final result or error
         try:
+            from medagent.db.repository import (
+                save_record,
+                _load_result_bundle,
+            )
+
             result = task.result()
             save_dir = result.get("save_dir", "")
             bundle: dict[str, Any] = {"diagnosis": result.get("diagnosis")}
-            if save_dir:
+
+            settings = get_settings()
+            if settings.mongodb_enabled:
+                # Collect all data from the pipeline state for MongoDB
+                tracer = result.get("_tracer")
+                pipeline_trace = None
+                if tracer:
+                    trace_obj = tracer.finalize()
+                    pipeline_trace = trace_obj.model_dump()
+
+                diagnosis_data = result.get("diagnosis")
+                final_diag = None
+                reasoning_trace = None
+                if diagnosis_data:
+                    final_diag = {"overall": diagnosis_data}
+                    chain = diagnosis_data.get("reasoning_chain")
+                    if chain:
+                        reasoning_trace = {
+                            "disease_goal": result.get("task_config", {}).get("disease", ""),
+                            "diagnosis": diagnosis_data.get("diagnosis", ""),
+                            "confidence": diagnosis_data.get("confidence", 0),
+                            "reasoning_chain": chain,
+                        }
+
+                record_bundle = {
+                    "pipeline_trace": pipeline_trace,
+                    "final_diagnosis": final_diag,
+                    "reasoning_trace": reasoning_trace,
+                    "concepts": None,  # collected during steps
+                    "brief_diagnosis": result.get("brief_diagnosis"),
+                }
+
+                # Try to read concepts from save_dir
+                concepts_path = os.path.join(save_dir, "concepts.json") if save_dir else ""
+                if concepts_path and os.path.exists(concepts_path):
+                    try:
+                        record_bundle["concepts"] = json.loads(
+                            Path(concepts_path).read_text(encoding="utf-8")
+                        )
+                    except (json.JSONDecodeError, OSError):
+                        pass
+
+                # Derive disease and record_id
+                disease_key = dir_name
+                record_id = Path(save_dir).name if save_dir else ""
+
+                await save_record(
+                    disease=disease_key,
+                    record_id=record_id,
+                    bundle=record_bundle,
+                    patient_context=patient_context,
+                    save_dir=save_dir,
+                )
+
+                bundle.update({
+                    "pipeline_trace": record_bundle["pipeline_trace"],
+                    "final_diagnosis": record_bundle["final_diagnosis"],
+                    "reasoning_trace": record_bundle["reasoning_trace"],
+                    "concepts": record_bundle["concepts"],
+                    "brief_diagnosis": record_bundle["brief_diagnosis"],
+                })
+            elif save_dir:
                 bundle.update(_load_result_bundle(save_dir))
+
             yield json.dumps({"type": "result", "data": bundle}) + "\n"
         except Exception as exc:
             logger.exception("Diagnosis pipeline failed")

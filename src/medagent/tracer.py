@@ -133,8 +133,18 @@ class PipelineTracer:
     # ── Persistence ──────────────────────────────────────────────
 
     def save_trace(self, save_dir: str) -> str:
-        """Save ``pipeline_trace.json`` and return its path."""
+        """Save ``pipeline_trace.json`` and return its path.
+
+        When MongoDB is enabled, file writes are skipped — data is
+        persisted via the repository layer instead.
+        """
         trace = self.finalize()
+
+        from medagent.config import get_settings
+        if get_settings().mongodb_enabled:
+            logger.info("Pipeline trace ready (MongoDB mode — skipping file write)")
+            return ""
+
         path = Path(save_dir) / "pipeline_trace.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -145,7 +155,15 @@ class PipelineTracer:
         return str(path)
 
     def generate_report(self, save_dir: str) -> str:
-        """Generate a human-readable ``diagnosis_report.md`` and return its path."""
+        """Generate a human-readable ``diagnosis_report.md`` and return its path.
+
+        Skipped when MongoDB is enabled.
+        """
+        from medagent.config import get_settings
+        if get_settings().mongodb_enabled:
+            logger.info("Report generation skipped (MongoDB mode)")
+            return ""
+
         trace = self.finalize()
         lines: list[str] = []
 

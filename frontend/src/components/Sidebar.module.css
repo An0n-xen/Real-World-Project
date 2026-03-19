@@ -1,9 +1,12 @@
-/* ── Sidebar: Dark Polymer Style ────────────────────────────── */
+/* ── Sidebar: Instrument Panel ── */
 
 .sidebar {
     width: 280px;
     height: 100vh;
-    background-color: var(--bg-sidebar);
+    background: #0B1426;
+    background-image:
+        radial-gradient(ellipse 120% 80% at 20% 100%, rgba(37, 99, 235, 0.04) 0%, transparent 60%),
+        linear-gradient(180deg, #0B1426 0%, #0E1A33 100%);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -11,6 +14,7 @@
     top: 0;
     z-index: 40;
     overflow: hidden;
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* Logo / Brand */
@@ -29,81 +33,73 @@
 .logoIcon {
     width: 34px;
     height: 34px;
-    border-radius: var(--radius-sm);
-    background-color: var(--accent-lime);
+    border-radius: 8px;
+    background: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0D0E12;
+    color: #fff;
     font-size: 1rem;
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.05em;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
 .title {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--text-sidebar);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     line-height: 1.2;
 }
 
 .tagline {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-family: var(--font-mono);
     color: var(--text-sidebar-secondary);
     font-weight: 500;
-    margin-top: 2px;
+    margin-top: 3px;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
 }
 
 /* Nav */
 .nav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .navBtn {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
-    font-size: 0.9rem;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-sidebar-secondary);
-    transition: all 0.15s;
+    transition: background 0.15s, color 0.15s;
     background: transparent;
     width: 100%;
     text-align: left;
 }
 
 .navBtn:hover {
-    background-color: var(--bg-sidebar-hover);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-sidebar);
 }
 
 .navBtn.active {
-    background-color: var(--accent-lime);
-    color: #0D0E12;
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--accent-light);
 }
 
-.navBtn.active .navIcon {
-    opacity: 1;
-}
-
-.navIcon {
-    font-size: 1rem;
-    opacity: 0.6;
-    flex-shrink: 0;
-}
-
-.navBtn.active .navIcon {
-    opacity: 1;
-}
+.navBtn.active .navIcon { opacity: 1; }
+.navIcon { font-size: 1rem; opacity: 0.5; flex-shrink: 0; }
 
 /* History */
 .historySection {
@@ -111,13 +107,13 @@
     overflow-y: auto;
     padding: 1.25rem 1rem;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
 .sectionTitle {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     font-weight: 700;
     color: var(--text-sidebar-secondary);
     margin-bottom: 0.875rem;
@@ -127,38 +123,31 @@
 .resultsList {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
 }
 
 .resultItem {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
+    padding: 0.65rem 0.875rem;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.12s;
     border: 1px solid transparent;
 }
 
 .resultItem:hover {
-    background-color: var(--bg-sidebar-hover);
-    border-color: var(--border-sidebar);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.04);
 }
 
-.resultIcon {
-    font-size: 0.875rem;
-    opacity: 0.5;
-    flex-shrink: 0;
-}
+.resultIcon { font-size: 0.875rem; opacity: 0.4; flex-shrink: 0; }
 
-.resultInfo {
-    flex: 1;
-    min-width: 0;
-}
+.resultInfo { flex: 1; min-width: 0; }
 
 .diseaseName {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-sidebar);
     white-space: nowrap;
@@ -168,7 +157,7 @@
 }
 
 .recordMeta {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-family: var(--font-mono);
     color: var(--text-sidebar-secondary);
     margin-top: 2px;
@@ -181,23 +170,22 @@
     color: var(--text-sidebar-secondary);
     font-size: 0.8rem;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity 0.12s;
     flex-shrink: 0;
 }
 
-.resultItem:hover .resultArrow {
-    opacity: 1;
-}
+.resultItem:hover .resultArrow { opacity: 0.8; }
 
 .placeholderText {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-sidebar-secondary);
     text-align: center;
     padding: 2rem 0;
     font-style: italic;
+    opacity: 0.7;
 }
 
-/* Bottom user area */
+/* Footer */
 .sidebarFooter {
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border-sidebar);
@@ -207,15 +195,20 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-sidebar-secondary);
 }
 
 .statusDot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background-color: var(--accent-lime);
-    box-shadow: 0 0 6px var(--accent-lime);
+    background: var(--accent-light);
     flex-shrink: 0;
+    animation: dotPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(96, 165, 250, 0.5); }
+    50% { box-shadow: 0 0 10px rgba(96, 165, 250, 0.25); }
 }

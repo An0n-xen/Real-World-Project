@@ -1,10 +1,10 @@
-/* ── ProgressOverlay ── */
+/* ── ProgressOverlay: Stark Clinical ── */
 
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(13, 14, 18, 0.65);
-    backdrop-filter: blur(6px);
+    background: rgba(11, 20, 38, 0.6);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -13,13 +13,28 @@
 }
 
 .card {
-    background: #fff;
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
     width: 100%;
     max-width: 460px;
     overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-overlay);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    position: relative;
+}
+
+/* Blue accent line at top */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 16px 16px 0 0;
 }
 
 /* Header */
@@ -28,47 +43,40 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-dim);
 }
 
 .pulsingDot {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: #CAFF00;
+    background: var(--accent);
     flex-shrink: 0;
-    animation: pulse 1.4s ease-in-out infinite;
-    box-shadow: 0 0 0 0 rgba(202, 255, 0, 0.6);
+    animation: dotPulse 1.8s ease-in-out infinite;
 }
 
-@keyframes pulse {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(202, 255, 0, 0.5);
-    }
-
-    50% {
-        box-shadow: 0 0 0 8px rgba(202, 255, 0, 0);
-    }
+@keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
 }
 
 .title {
-    font-size: 1.25rem;
-    font-weight: 900;
+    font-size: 1.15rem;
+    font-weight: 800;
     letter-spacing: -0.03em;
     margin-bottom: 2px;
+    color: var(--text-primary);
 }
 
 .subtitle {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
     text-transform: capitalize;
 }
 
 .timer {
     margin-left: auto;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 900;
     font-family: var(--font-mono);
     letter-spacing: -0.03em;
@@ -94,54 +102,52 @@
     flex-direction: column;
     align-items: center;
     flex-shrink: 0;
-    width: 28px;
+    width: 26px;
 }
 
 .stageIcon {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: 0.75rem;
-    transition: all 0.3s;
+    font-size: 0.7rem;
+    transition: all 0.25s;
 }
 
 .stageConnector {
     flex: 1;
-    width: 2px;
+    width: 1.5px;
     background: var(--border-color);
     min-height: 10px;
     margin: 3px 0;
 }
 
-.stage:last-child .stageConnector {
-    display: none;
-}
+.stage:last-child .stageConnector { display: none; }
 
 /* Done */
 .done .stageIcon {
-    background: #0D0E12;
-    color: #CAFF00;
-    border: 2px solid #0D0E12;
+    background: var(--accent);
+    color: #fff;
+    border: none;
 }
 
 .done .stageName {
     color: var(--text-tertiary);
     text-decoration: line-through;
-    text-decoration-color: rgba(0, 0, 0, 0.2);
+    text-decoration-color: var(--border-color);
 }
 
 .done .stageConnector {
-    background: #0D0E12;
+    background: var(--accent);
 }
 
 /* Active */
 .active .stageIcon {
-    background: #0D0E12;
-    border: 2px solid #0D0E12;
+    background: var(--accent);
+    border: none;
 }
 
 .active .stageName {
@@ -161,62 +167,53 @@
 
 .stageNum {
     font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 700;
     color: var(--text-tertiary);
 }
 
 .activeSpinner {
     display: block;
-    width: 12px;
-    height: 12px;
-    border: 2.5px solid rgba(202, 255, 0, 0.3);
-    border-top-color: #CAFF00;
+    width: 11px;
+    height: 11px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
     border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+    animation: spin 0.65s linear infinite;
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 .stageBody {
-    padding-top: 4px;
+    padding-top: 3px;
     padding-bottom: 10px;
     flex: 1;
 }
 
 .stageName {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     font-weight: 600;
     transition: color 0.2s;
 }
 
 .stageDesc {
-    font-size: 0.775rem;
+    font-size: 0.75rem;
     color: var(--text-tertiary);
     margin-top: 3px;
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(3px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Footer */
 .footer {
-    padding: 1.25rem 1.75rem;
-    border-top: 1px solid var(--border-color);
+    padding: 1.125rem 1.75rem;
+    border-top: 1px solid var(--border-dim);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -224,21 +221,21 @@
 
 .progressBar {
     flex: 1;
-    height: 6px;
-    background: var(--border-color);
+    height: 4px;
+    background: var(--bg-subtle);
     border-radius: var(--radius-full);
     overflow: hidden;
 }
 
 .progressFill {
     height: 100%;
-    background: #0D0E12;
+    background: var(--accent);
     border-radius: var(--radius-full);
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progressText {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-family: var(--font-mono);
     font-weight: 700;
     color: var(--text-tertiary);

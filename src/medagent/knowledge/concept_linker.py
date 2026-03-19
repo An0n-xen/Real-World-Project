@@ -108,8 +108,17 @@ class ConceptLinker:
         output_file: str | Path,
         field: str = "concepts",
     ) -> list[MedicalConcept]:
-        """Extract concepts and save to a JSON file."""
+        """Extract concepts and save to a JSON file.
+
+        File writes are skipped when MongoDB is enabled.
+        """
+        from medagent.config import get_settings
+
         concepts = self.extract(text)
+
+        if get_settings().mongodb_enabled:
+            logger.info("Concepts extracted (%d) — skipping file write (MongoDB mode)", len(concepts))
+            return concepts
 
         output_file = Path(output_file)
         output_file.parent.mkdir(parents=True, exist_ok=True)

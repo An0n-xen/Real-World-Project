@@ -152,8 +152,17 @@ class DeciderAgent:
         disease_goal: str = "",
         field: str = "overall",
     ) -> DiagnosisResult:
-        """Run decision and save to *output_file* under *field*."""
+        """Run decision and save to *output_file* under *field*.
+
+        File writes are skipped when MongoDB is enabled.
+        """
+        from medagent.config import get_settings
+
         result = self.decide(indicators, task_input, disease_goal)
+
+        if get_settings().mongodb_enabled:
+            logger.info("Final diagnosis ready (MongoDB mode — skipping file write)")
+            return result
 
         output_file = Path(output_file)
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -282,8 +291,17 @@ class DeciderAgent:
         disease_goal: str = "",
         field: str = "overall",
     ) -> DiagnosisResult:
-        """Async version of :meth:`decide_and_save`."""
+        """Async version of :meth:`decide_and_save`.
+
+        File writes are skipped when MongoDB is enabled.
+        """
+        from medagent.config import get_settings
+
         result = await self.adecide(indicators, task_input, disease_goal)
+
+        if get_settings().mongodb_enabled:
+            logger.info("[async] Final diagnosis ready (MongoDB mode — skipping file write)")
+            return result
 
         output_file = Path(output_file)
         output_file.parent.mkdir(parents=True, exist_ok=True)
