@@ -400,6 +400,48 @@
     display: block;
 }
 
+/* Legend */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-dim);
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legendLine {
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+.legendLineDashed {
+    width: 16px;
+    height: 0;
+    border-top: 2px dashed #94A3B8;
+    flex-shrink: 0;
+}
+
 /* Stats */
 .statsGrid {
     display: grid;

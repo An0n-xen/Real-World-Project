@@ -106,6 +106,16 @@ export default function ResultsDashboard({ data, diseaseInput, onBack }: Results
           <p className={styles.graphSubtitle}>Drag nodes · hover for details · observations and concepts linked to diagnosis</p>
         </div>
         <canvas id="findings-canvas" ref={findingsCanvasRef} width={800} height={420} className={styles.graphCanvas}></canvas>
+        <div className={styles.legend}>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#059669' }} /> Diagnosis</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#0284C7' }} /> Evidence</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#2563EB' }} /> Finding</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#E11D48' }} /> Condition</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#D97706' }} /> Symptom</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#7C3AED' }} /> Anatomy</span>
+          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#059669' }} /> Measurement</span>
+          <span className={styles.legendItem}><span className={styles.legendLineDashed} /> Cross-link</span>
+        </div>
       </div>
 
       <div className={styles.grid}>
@@ -213,10 +223,18 @@ export default function ResultsDashboard({ data, diseaseInput, onBack }: Results
           </div>
 
           {/* Pipeline Graph */}
-          <div className={styles.panel} style={{ textAlign: 'center' }}>
-            <h3 className={styles.panelTitle}>Pipeline Execution</h3>
-            <p className={styles.graphSubtitle}>Hover over nodes for step details</p>
+          <div className={`${styles.panel} ${styles.graphSection}`}>
+            <div className={styles.graphHeader}>
+              <h3 className={styles.panelTitle} style={{ marginBottom: 0 }}>Pipeline Execution</h3>
+              <p className={styles.graphSubtitle}>Hover over nodes for step details</p>
+            </div>
             <canvas id="pipeline-canvas" ref={pipelineCanvasRef} width={280} height={480} className={styles.graphCanvas}></canvas>
+            <div className={styles.legend}>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#2563EB' }} /> Completed</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#2563EB', boxShadow: '0 0 6px rgba(37,99,235,0.5)' }} /> Running</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#E11D48' }} /> Error</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#CBD5E1' }} /> Pending</span>
+            </div>
           </div>
 
           {/* Medical Concepts */}
